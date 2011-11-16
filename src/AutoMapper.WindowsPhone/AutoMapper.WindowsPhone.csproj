@@ -1,0 +1,379 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.20506</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}</ProjectGuid>
+    <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>AutoMapper</RootNamespace>
+    <AssemblyName>AutoMapper</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <TargetFrameworkProfile>WindowsPhone71</TargetFrameworkProfile>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'AutomatedDebug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>..\..\build\Debug\AutoMapper.WindowsPhone\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>Bin\Debug\AutoMapper.WindowsPhone.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <DocumentationFile>..\..\build\Debug\AutoMapper.WindowsPhone\AutoMapper.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'AutomatedRelease|AnyCPU'">
+    <OutputPath>..\..\build\Release\AutoMapper.WindowsPhone\</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <Optimize>true</Optimize>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>Bin\Release\AutoMapper.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <DocumentationFile>..\..\build\Release\AutoMapper.WindowsPhone\AutoMapper.XML</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\Windows Phone 7.1\mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="system, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\Windows Phone 7.1\system.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\Windows Phone 7.1\System.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\AutoMapper.Silverlight\Internal\ConcurrentDictionary.cs">
+      <Link>Internal\ConcurrentDictionary.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\Internal\ConcurrentHashtable.cs">
+      <Link>Internal\ConcurrentHashtable.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\Internal\Hasher.cs">
+      <Link>Internal\Hasher.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\Internal\Segment.cs">
+      <Link>Internal\Segment.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\Internal\SegmentRange.cs">
+      <Link>Internal\SegmentRange.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\Internal\TinyReaderWriterLock.cs">
+      <Link>Internal\TinyReaderWriterLock.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\System\LockRecursionException.cs">
+      <Link>System\LockRecursionException.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\System\LockRecursionPolicy.cs">
+      <Link>System\LockRecursionPolicy.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\System\ReaderWriterSlimLock.cs">
+      <Link>System\ReaderWriterSlimLock.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\System\SerializableAttribute.cs">
+      <Link>System\SerializableAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper.Silverlight\System\SynchronizationLockException.cs">
+      <Link>System\SynchronizationLockException.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\AutoMapperConfigurationException.cs">
+      <Link>AutoMapperConfigurationException.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\AutoMapperMappingException.cs">
+      <Link>AutoMapperMappingException.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ConfigurationStore.cs">
+      <Link>ConfigurationStore.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ConstructorMap.cs">
+      <Link>ConstructorMap.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ConstructorParameterMap.cs">
+      <Link>ConstructorParameterMap.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IConfigurationProvider.cs">
+      <Link>IConfigurationProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IFormatterConfiguration.cs">
+      <Link>IFormatterConfiguration.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IFormatterExpression.cs">
+      <Link>IFormatterExpression.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IgnoreMapAttribute.cs">
+      <Link>IgnoreMapAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IMappingAction.cs">
+      <Link>IMappingAction.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IMappingEngine.cs">
+      <Link>IMappingEngine.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IMappingEngineRunner.cs">
+      <Link>IMappingEngineRunner.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IMappingExpression.cs">
+      <Link>IMappingExpression.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IMappingOperationOptions.cs">
+      <Link>IMappingOperationOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IMemberGetter.cs">
+      <Link>IMemberGetter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\INamingConvention.cs">
+      <Link>INamingConvention.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\DefaultResolver.cs">
+      <Link>Internal\DefaultResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\DeferredInstantiatedConverter.cs">
+      <Link>Internal\DeferredInstantiatedConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\DeferredInstantiatedFormatter.cs">
+      <Link>Internal\DeferredInstantiatedFormatter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\DeferredInstantiatedResolver.cs">
+      <Link>Internal\DeferredInstantiatedResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\DelegateBasedResolver.cs">
+      <Link>Internal\DelegateBasedResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\DelegateBasedResolver2.cs">
+      <Link>Internal\DelegateBasedResolver2.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\DelegateFactory.cs">
+      <Link>Internal\DelegateFactory.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\EnumerableExtensions.cs">
+      <Link>Internal\EnumerableExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\ExpressionValueFormatter.cs">
+      <Link>Internal\ExpressionValueFormatter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\FieldGetter.cs">
+      <Link>Internal\FieldGetter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\FormatterCtorExpression.cs">
+      <Link>Internal\FormatterCtorExpression.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\FormatterExpression.cs">
+      <Link>Internal\FormatterExpression.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\ITypeMapFactory.cs">
+      <Link>Internal\ITypeMapFactory.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\MappingExpression.cs">
+      <Link>Internal\MappingExpression.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\MemberGetter.cs">
+      <Link>Internal\MemberGetter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\MethodGetter.cs">
+      <Link>Internal\MethodGetter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\NullReplacementMethod.cs">
+      <Link>Internal\NullReplacementMethod.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\PrimitiveExtensions.cs">
+      <Link>Internal\PrimitiveExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\PropertyGetter.cs">
+      <Link>Internal\PropertyGetter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\PropertyNameResolver.cs">
+      <Link>Internal\PropertyNameResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\ProxyBase.cs">
+      <Link>Internal\ProxyBase.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\ReflectionHelper.cs">
+      <Link>Internal\ReflectionHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\ResolutionExpression.cs">
+      <Link>Internal\ResolutionExpression.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\TypeMapFactory.cs">
+      <Link>Internal\TypeMapFactory.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Internal\TypePair.cs">
+      <Link>Internal\TypePair.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IObjectMapper.cs">
+      <Link>IObjectMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ITypeConverter.cs">
+      <Link>ITypeConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IValueFormatter.cs">
+      <Link>IValueFormatter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\IValueResolver.cs">
+      <Link>IValueResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mapper.cs">
+      <Link>Mapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\ArrayMapper.cs">
+      <Link>Mappers\ArrayMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\AssignableMapper.cs">
+      <Link>Mappers\AssignableMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\CollectionMapper.cs">
+      <Link>Mappers\CollectionMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\DictionaryMapper.cs">
+      <Link>Mappers\DictionaryMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\EnumerableMapper.cs">
+      <Link>Mappers\EnumerableMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\EnumerableMapperBase.cs">
+      <Link>Mappers\EnumerableMapperBase.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\EnumMapper.cs">
+      <Link>Mappers\EnumMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\FlagsEnumMapper.cs">
+      <Link>Mappers\FlagsEnumMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\ITypeMapObjectMapper.cs">
+      <Link>Mappers\ITypeMapObjectMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\MapperRegistry.cs">
+      <Link>Mappers\MapperRegistry.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\NullableMapper.cs">
+      <Link>Mappers\NullableMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\ObjectCreator.cs">
+      <Link>Mappers\ObjectCreator.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\ReadOnlyCollectionMapper.cs">
+      <Link>Mappers\ReadOnlyCollectionMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\StringMapper.cs">
+      <Link>Mappers\StringMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\TypeConverterMapper.cs">
+      <Link>Mappers\TypeConverterMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\TypeHelper.cs">
+      <Link>Mappers\TypeHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\TypeMapMapper.cs">
+      <Link>Mappers\TypeMapMapper.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Mappers\TypeMapObjectMapperRegistry.cs">
+      <Link>Mappers\TypeMapObjectMapperRegistry.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\MappingEngine.cs">
+      <Link>MappingEngine.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\Profile.cs">
+      <Link>Profile.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\PropertyMap.cs">
+      <Link>PropertyMap.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ResolutionContext.cs">
+      <Link>ResolutionContext.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ResolutionResult.cs">
+      <Link>ResolutionResult.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ThreadSafeList.cs">
+      <Link>ThreadSafeList.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\TypeInfo.cs">
+      <Link>TypeInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\TypeMap.cs">
+      <Link>TypeMap.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ValueFormatter.cs">
+      <Link>ValueFormatter.cs</Link>
+    </Compile>
+    <Compile Include="..\AutoMapper\ValueResolver.cs">
+      <Link>ValueResolver.cs</Link>
+    </Compile>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="ExpressionCompiler\Conversion.cs" />
+    <Compile Include="ExpressionCompiler\ExpressionCompiler.cs" />
+    <Compile Include="ExpressionCompiler\ExpressionHelper.cs" />
+    <Compile Include="ExpressionCompiler\ExpressionInterpreter.cs" />
+    <Compile Include="ExpressionCompiler\ExpressionValidator.cs" />
+    <Compile Include="ExpressionCompiler\ExpressionVisitor.cs" />
+    <Compile Include="ExpressionCompiler\Extensions.cs" />
+    <Compile Include="ExpressionCompiler\Interpreter.cs" />
+    <Compile Include="ExpressionCompiler\Math.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="System\Lazy.cs" />
+    <Compile Include="System\LazyThreadSafetyMode.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.$(TargetFrameworkProfile).Overrides.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

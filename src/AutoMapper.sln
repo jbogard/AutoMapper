@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoMapper.Silverlight", "A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests.Silverlight", "UnitTests.Silverlight\UnitTests.Silverlight.csproj", "{982B7279-AFE5-4C36-A6E9-8644EFF185F4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoMapper.WindowsPhone", "AutoMapper.WindowsPhone\AutoMapper.WindowsPhone.csproj", "{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		AutomatedDebug|Any CPU = AutomatedDebug|Any CPU
@@ -74,6 +76,14 @@ Global
 		{982B7279-AFE5-4C36-A6E9-8644EFF185F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{982B7279-AFE5-4C36-A6E9-8644EFF185F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{982B7279-AFE5-4C36-A6E9-8644EFF185F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.AutomatedDebug|Any CPU.ActiveCfg = AutomatedDebug|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.AutomatedDebug|Any CPU.Build.0 = AutomatedDebug|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.AutomatedRelease|Any CPU.ActiveCfg = AutomatedRelease|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.AutomatedRelease|Any CPU.Build.0 = AutomatedRelease|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -84,6 +94,7 @@ Global
 		{982B7279-AFE5-4C36-A6E9-8644EFF185F4} = {1BCC7A00-6382-4891-936A-F164614D26A4}
 		{DDF551F9-B27D-4283-BFA0-E7068E05967D} = {C1930F52-C66E-4E56-B7DB-FD42E497FFF0}
 		{5FD27B0F-0EE7-4870-BA2B-2F061EA31CFD} = {C1930F52-C66E-4E56-B7DB-FD42E497FFF0}
+		{5C2653AA-21BC-4405-88B3-AEAE566C2CD1} = {C1930F52-C66E-4E56-B7DB-FD42E497FFF0}
 		{277C689D-B1C1-43EA-B20D-C1155C4B2EA7} = {B84E9CD3-2DDB-47FA-84BE-732EBF2F46CD}
 	EndGlobalSection
 EndGlobal

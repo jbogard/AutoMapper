@@ -52,6 +52,7 @@ namespace AutoMapper.Mappers
                 
                 if (typeof(TCollection).IsInterface)
                 {
+#if !WINDOWS_PHONE
                     if (typeof(TCollection).IsGenericType && (typeof(TCollection).GetGenericTypeDefinition() == typeof(ISet<>)))
                     {
                         collection = new HashSet<TElement>();
@@ -60,6 +61,9 @@ namespace AutoMapper.Mappers
                     {
                         collection = new List<TElement>();
                     }
+#else
+                    collection = new List<TElement>();
+#endif
                 }
                 else
                 {

@@ -14,24 +14,24 @@ using AutoMapper.Mappers;
 
 namespace AutoMapper
 {
-	public class MappingEngine : IMappingEngine, IMappingEngineRunner
-	{
-		private readonly IConfigurationProvider _configurationProvider;
-		private readonly IObjectMapper[] _mappers;
+    public class MappingEngine : IMappingEngine, IMappingEngineRunner
+    {
+        private readonly IConfigurationProvider _configurationProvider;
+        private readonly IObjectMapper[] _mappers;
         private readonly ConcurrentDictionary<TypePair, IObjectMapper> _objectMapperCache = new ConcurrentDictionary<TypePair, IObjectMapper>();
         private readonly ConcurrentDictionary<TypePair, LambdaExpression> _expressionCache = new ConcurrentDictionary<TypePair, LambdaExpression>();
 
-		public MappingEngine(IConfigurationProvider configurationProvider)
-		{
-			_configurationProvider = configurationProvider;
-			_mappers = configurationProvider.GetMappers();
-			_configurationProvider.TypeMapCreated += ClearTypeMap;
-		}
+        public MappingEngine(IConfigurationProvider configurationProvider)
+        {
+            _configurationProvider = configurationProvider;
+            _mappers = configurationProvider.GetMappers();
+            _configurationProvider.TypeMapCreated += ClearTypeMap;
+        }
 
-		public IConfigurationProvider ConfigurationProvider
-		{
-			get { return _configurationProvider; }
-		}
+        public IConfigurationProvider ConfigurationProvider
+        {
+            get { return _configurationProvider; }
+        }
 
         public TDestination Map<TDestination>(object source)
         {
@@ -51,124 +51,126 @@ namespace AutoMapper
             return mappedObject;
         }
 
-		public TDestination Map<TSource, TDestination>(TSource source)
-		{
-			Type modelType = typeof(TSource);
-			Type destinationType = typeof(TDestination);
+        public TDestination Map<TSource, TDestination>(TSource source)
+        {
+            Type modelType = typeof(TSource);
+            Type destinationType = typeof(TDestination);
 
-			return (TDestination)Map(source, modelType, destinationType, opts => {});
-		}
+            return (TDestination)Map(source, modelType, destinationType, opts => { });
+        }
 
         public TDestination Map<TSource, TDestination>(TSource source, Action<IMappingOperationOptions> opts)
         {
-            Type modelType = typeof (TSource);
-            Type destinationType = typeof (TDestination);
+            Type modelType = typeof(TSource);
+            Type destinationType = typeof(TDestination);
 
-            return (TDestination) Map(source, modelType, destinationType, opts);
+            return (TDestination)Map(source, modelType, destinationType, opts);
         }
 
-	    public TDestination Map<TSource, TDestination>(TSource source, TDestination destination)
-		{
-		    return Map(source, destination, opts => { });
-		}
+        public TDestination Map<TSource, TDestination>(TSource source, TDestination destination)
+        {
+            return Map(source, destination, opts => { });
+        }
 
-	    public TDestination Map<TSource, TDestination>(TSource source, TDestination destination, Action<IMappingOperationOptions> opts)
-	    {
+        public TDestination Map<TSource, TDestination>(TSource source, TDestination destination, Action<IMappingOperationOptions> opts)
+        {
             Type modelType = typeof(TSource);
             Type destinationType = typeof(TDestination);
 
             return (TDestination)Map(source, destination, modelType, destinationType, opts);
         }
 
-	    public object Map(object source, Type sourceType, Type destinationType)
-	    {
-	        return Map(source, sourceType, destinationType, opt => { });
-	    }
-
-	    public object Map(object source, Type sourceType, Type destinationType, Action<IMappingOperationOptions> opts)
-	    {
-            TypeMap typeMap = ConfigurationProvider.FindTypeMapFor(source, sourceType, destinationType);
-
-	        var options = new MappingOperationOptions();
-
-            opts(options);
-
-	        var context = new ResolutionContext(typeMap, source, sourceType, destinationType, options);
-
-            return ((IMappingEngineRunner)this).Map(context);
-	    }
-
-	    public object Map(object source, object destination, Type sourceType, Type destinationType)
-	    {
-	        return Map(source, destination, sourceType, destinationType, opts => { });
+        public object Map(object source, Type sourceType, Type destinationType)
+        {
+            return Map(source, sourceType, destinationType, opt => { });
         }
 
-	    public object Map(object source, object destination, Type sourceType, Type destinationType, Action<IMappingOperationOptions> opts)
-	    {
+        public object Map(object source, Type sourceType, Type destinationType, Action<IMappingOperationOptions> opts)
+        {
             TypeMap typeMap = ConfigurationProvider.FindTypeMapFor(source, sourceType, destinationType);
 
-	        var options = new MappingOperationOptions();
+            var options = new MappingOperationOptions();
 
             opts(options);
 
-	        var context = new ResolutionContext(typeMap, source, destination, sourceType, destinationType, options);
+            var context = new ResolutionContext(typeMap, source, sourceType, destinationType, options);
 
             return ((IMappingEngineRunner)this).Map(context);
         }
 
+        public object Map(object source, object destination, Type sourceType, Type destinationType)
+        {
+            return Map(source, destination, sourceType, destinationType, opts => { });
+        }
 
-	    public TDestination DynamicMap<TSource, TDestination>(TSource source)
-		{
-			Type modelType = typeof(TSource);
-			Type destinationType = typeof(TDestination);
+        public object Map(object source, object destination, Type sourceType, Type destinationType, Action<IMappingOperationOptions> opts)
+        {
+            TypeMap typeMap = ConfigurationProvider.FindTypeMapFor(source, sourceType, destinationType);
 
-			return (TDestination)DynamicMap(source, modelType, destinationType);
-		}
+            var options = new MappingOperationOptions();
 
-		public void DynamicMap<TSource, TDestination>(TSource source, TDestination destination)
-		{
-			Type modelType = typeof(TSource);
-			Type destinationType = typeof(TDestination);
+            opts(options);
 
-			DynamicMap(source, destination, modelType, destinationType);
-		}
+            var context = new ResolutionContext(typeMap, source, destination, sourceType, destinationType, options);
 
-		public TDestination DynamicMap<TDestination>(object source)
-		{
-			Type modelType = source == null ? typeof(object) : source.GetType();
-			Type destinationType = typeof(TDestination);
+            return ((IMappingEngineRunner)this).Map(context);
+        }
 
-			return (TDestination)DynamicMap(source, modelType, destinationType);
-		}
 
-		public object DynamicMap(object source, Type sourceType, Type destinationType)
-		{
-			var typeMap = ConfigurationProvider.FindTypeMapFor(source, sourceType, destinationType) ??
-			              ConfigurationProvider.CreateTypeMap(sourceType, destinationType);
+        public TDestination DynamicMap<TSource, TDestination>(TSource source)
+        {
+            Type modelType = typeof(TSource);
+            Type destinationType = typeof(TDestination);
 
-			var context = new ResolutionContext(typeMap, source, sourceType, destinationType, new MappingOperationOptions());
+            return (TDestination)DynamicMap(source, modelType, destinationType);
+        }
 
-			return ((IMappingEngineRunner)this).Map(context);
-		}
+        public void DynamicMap<TSource, TDestination>(TSource source, TDestination destination)
+        {
+            Type modelType = typeof(TSource);
+            Type destinationType = typeof(TDestination);
 
-		public void DynamicMap(object source, object destination, Type sourceType, Type destinationType)
-		{
-			var typeMap = ConfigurationProvider.FindTypeMapFor(source, sourceType, destinationType) ??
-			              ConfigurationProvider.CreateTypeMap(sourceType, destinationType);
+            DynamicMap(source, destination, modelType, destinationType);
+        }
 
-			var context = new ResolutionContext(typeMap, source, destination, sourceType, destinationType, new MappingOperationOptions());
+        public TDestination DynamicMap<TDestination>(object source)
+        {
+            Type modelType = source == null ? typeof(object) : source.GetType();
+            Type destinationType = typeof(TDestination);
 
-			((IMappingEngineRunner)this).Map(context);
-		}
+            return (TDestination)DynamicMap(source, modelType, destinationType);
+        }
 
+        public object DynamicMap(object source, Type sourceType, Type destinationType)
+        {
+            var typeMap = ConfigurationProvider.FindTypeMapFor(source, sourceType, destinationType) ??
+                          ConfigurationProvider.CreateTypeMap(sourceType, destinationType);
+
+            var context = new ResolutionContext(typeMap, source, sourceType, destinationType, new MappingOperationOptions());
+
+            return ((IMappingEngineRunner)this).Map(context);
+        }
+
+        public void DynamicMap(object source, object destination, Type sourceType, Type destinationType)
+        {
+            var typeMap = ConfigurationProvider.FindTypeMapFor(source, sourceType, destinationType) ??
+                          ConfigurationProvider.CreateTypeMap(sourceType, destinationType);
+
+            var context = new ResolutionContext(typeMap, source, destination, sourceType, destinationType, new MappingOperationOptions());
+
+            ((IMappingEngineRunner)this).Map(context);
+        }
+
+#if !WINDOWS_PHONE
         public Expression<Func<TSource, TDestination>> CreateMapExpression<TSource, TDestination>()
         {
-            return (Expression<Func<TSource, TDestination>>) 
-                _expressionCache.GetOrAdd(new TypePair(typeof (TSource), typeof (TDestination)), tp =>
+            return (Expression<Func<TSource, TDestination>>)
+                _expressionCache.GetOrAdd(new TypePair(typeof(TSource), typeof(TDestination)), tp =>
             {
                 return CreateMapExpression(tp.SourceType, tp.DestinationType);
             });
         }
+#endif
 
         public TDestination Map<TSource, TDestination>(ResolutionContext parentContext, TSource source)
         {
@@ -179,13 +181,14 @@ namespace AutoMapper
             return (TDestination)((IMappingEngineRunner)this).Map(context);
         }
 
+#if !WINDOWS_PHONE
         private LambdaExpression CreateMapExpression(
             Type typeIn, Type typeOut)
         {
             var typeMap = ConfigurationProvider.FindTypeMapFor(typeIn, typeOut);
 
             // this is the input parameter of this expression with name <variableName>
-            ParameterExpression instanceParameter = Expression.Parameter(typeIn);
+            ParameterExpression instanceParameter = Expression.Parameter(typeIn, "parameter");
 
             var bindings = new List<MemberBinding>();
             foreach (var propertyMap in typeMap.GetPropertyMaps())
@@ -285,39 +288,39 @@ namespace AutoMapper
 
             return Expression.Lambda(total, instanceParameter);
         }
+#endif
 
+        object IMappingEngineRunner.Map(ResolutionContext context)
+        {
+            try
+            {
+                var contextTypePair = new TypePair(context.SourceType, context.DestinationType);
 
-		object IMappingEngineRunner.Map(ResolutionContext context)
-		{
-			try
-			{
-				var contextTypePair = new TypePair(context.SourceType, context.DestinationType);
+                Func<TypePair, IObjectMapper> missFunc = tp => _mappers.FirstOrDefault(mapper => mapper.IsMatch(context));
 
-			    Func<TypePair, IObjectMapper> missFunc = tp => _mappers.FirstOrDefault(mapper => mapper.IsMatch(context));
+                IObjectMapper mapperToUse = _objectMapperCache.GetOrAdd(contextTypePair, missFunc);
 
-			    IObjectMapper mapperToUse = _objectMapperCache.GetOrAdd(contextTypePair, missFunc);
-
-				if (mapperToUse == null)
-				{
+                if (mapperToUse == null)
+                {
                     if (context.SourceValue != null)
-					    throw new AutoMapperMappingException(context, "Missing type map configuration or unsupported mapping.");
+                        throw new AutoMapperMappingException(context, "Missing type map configuration or unsupported mapping.");
 
-				    return ObjectCreator.CreateDefaultValue(context.DestinationType);
-				}
+                    return ObjectCreator.CreateDefaultValue(context.DestinationType);
+                }
 
-				return mapperToUse.Map(context, this);
-			}
-			catch (Exception ex)
-			{
-				throw new AutoMapperMappingException(context, ex);
-			}
-		}
+                return mapperToUse.Map(context, this);
+            }
+            catch (Exception ex)
+            {
+                throw new AutoMapperMappingException(context, ex);
+            }
+        }
 
-		string IMappingEngineRunner.FormatValue(ResolutionContext context)
-		{
-			TypeMap contextTypeMap = context.GetContextTypeMap();
-			IFormatterConfiguration configuration = contextTypeMap != null
-												? ConfigurationProvider.GetProfileConfiguration(contextTypeMap.Profile)
+        string IMappingEngineRunner.FormatValue(ResolutionContext context)
+        {
+            TypeMap contextTypeMap = context.GetContextTypeMap();
+            IFormatterConfiguration configuration = contextTypeMap != null
+                                                ? ConfigurationProvider.GetProfileConfiguration(contextTypeMap.Profile)
                                                 : ConfigurationProvider.GetProfileConfiguration(ConfigurationStore.DefaultProfileName);
 
             object valueToFormat = context.SourceValue;
@@ -335,12 +338,12 @@ namespace AutoMapper
             if (formattedValue == null && !((IMappingEngineRunner)this).ShouldMapSourceValueAsNull(context))
                 return string.Empty;
 
-		    return formattedValue;
-		}
+            return formattedValue;
+        }
 
-		object IMappingEngineRunner.CreateObject(ResolutionContext context)
-		{
-			var typeMap = context.TypeMap;
+        object IMappingEngineRunner.CreateObject(ResolutionContext context)
+        {
+            var typeMap = context.TypeMap;
             var destinationType = context.DestinationType;
 
             if (typeMap != null)
@@ -353,43 +356,48 @@ namespace AutoMapper
                 else if (typeMap.ConstructorMap != null)
                     return typeMap.ConstructorMap.ResolveValue(context);
 
-			if (context.DestinationValue != null)
-				return context.DestinationValue;
+            if (context.DestinationValue != null)
+                return context.DestinationValue;
 
             if (destinationType.IsInterface)
+#if !WINDOWS_PHONE
                 destinationType = ProxyGenerator.GetProxyType(destinationType);
+#else
+                throw new AutoMapperConfigurationException("Mapping to interfaces not supported in Windows Phone");
+#endif
 
-			return ObjectCreator.CreateObject(destinationType);
-		}
+            return ObjectCreator.CreateObject(destinationType);
+        }
 
         bool IMappingEngineRunner.ShouldMapSourceValueAsNull(ResolutionContext context)
-		{
+        {
             if (context.DestinationType.IsValueType)
                 return false;
 
-			var typeMap = context.GetContextTypeMap();
-			if (typeMap != null)
-				return ConfigurationProvider.GetProfileConfiguration(typeMap.Profile).MapNullSourceValuesAsNull;
+            var typeMap = context.GetContextTypeMap();
+            if (typeMap != null)
+                return ConfigurationProvider.GetProfileConfiguration(typeMap.Profile).MapNullSourceValuesAsNull;
 
-			return ConfigurationProvider.MapNullSourceValuesAsNull;
-		}
+            return ConfigurationProvider.MapNullSourceValuesAsNull;
+        }
 
         bool IMappingEngineRunner.ShouldMapSourceCollectionAsNull(ResolutionContext context)
-		{
-			var typeMap = context.GetContextTypeMap();
-			if (typeMap != null)
-				return ConfigurationProvider.GetProfileConfiguration(typeMap.Profile).MapNullSourceCollectionsAsNull;
+        {
+            var typeMap = context.GetContextTypeMap();
+            if (typeMap != null)
+                return ConfigurationProvider.GetProfileConfiguration(typeMap.Profile).MapNullSourceCollectionsAsNull;
 
             return ConfigurationProvider.MapNullSourceCollectionsAsNull;
-		}
+        }
 
-		private void ClearTypeMap(object sender, TypeMapCreatedEventArgs e)
-		{
-		    IObjectMapper existing;
+        private void ClearTypeMap(object sender, TypeMapCreatedEventArgs e)
+        {
+            IObjectMapper existing;
 
-		    _objectMapperCache.TryRemove(new TypePair(e.TypeMap.SourceType, e.TypeMap.DestinationType), out existing);
-		}
+            _objectMapperCache.TryRemove(new TypePair(e.TypeMap.SourceType, e.TypeMap.DestinationType), out existing);
+        }
 
+#if !WINDOWS_PHONE
         /// <summary>
         /// This expression visitor will replace an input parameter by another one
         /// 
@@ -421,6 +429,7 @@ namespace AutoMapper
                 return Expression.MakeMemberAccess(newObj, newMember);
             }
         }
+#endif
+    }
 
-	}
 }

@@ -72,10 +72,12 @@ namespace AutoMapper
             return Engine.Map(source, destination, sourceType, destinationType, opts);
         }
 
+#if !WINDOWS_PHONE
         public static Expression<Func<TSource, TDestination>> CreateMapExpression<TSource, TDestination>()
 		{
             return Engine.CreateMapExpression<TSource, TDestination>();
 		}
+#endif
 
 		public static TDestination DynamicMap<TSource, TDestination>(TSource source)
 		{

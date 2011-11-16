@@ -42,8 +42,8 @@ namespace AutoMapper
 				instanceParameter,
 				argumentsParameter);
 
-			return lambda.Compile();
-		}
+            return Compile(lambda);
+        }
 
 		public static LateBoundPropertyGet CreateGet(PropertyInfo property)
 		{
@@ -56,8 +56,8 @@ namespace AutoMapper
 				instanceParameter
 				);
 
-			return lambda.Compile();
-		}
+            return Compile(lambda);
+        }
 
 		public static LateBoundFieldGet CreateGet(FieldInfo field)
 		{
@@ -70,8 +70,8 @@ namespace AutoMapper
 				instanceParameter
 				);
 
-			return lambda.Compile();
-		}
+            return Compile(lambda);
+        }
 
 		public static LateBoundFieldSet CreateSet(FieldInfo field)
 		{
@@ -140,9 +140,9 @@ namespace AutoMapper
 	        LateBoundCtor ctor = _ctorCache.GetOrAdd(type, t =>
 	        {
 	            var ctorExpression = Expression.Lambda<LateBoundCtor>(Expression.Convert(Expression.New(type), typeof(object)));
-                
-	            return ctorExpression.Compile();
-	        });
+
+                return Compile(ctorExpression);
+            });
 
 	        return ctor;
 	    }
@@ -199,7 +199,17 @@ namespace AutoMapper
 
 	        var lambda = Expression.Lambda<LateBoundParamsCtor>(newExpression, paramsExpr);
 
-	        return lambda.Compile();
+	        return Compile(lambda);
 	    }
+
+        private static TDelegate Compile<TDelegate>(Expression<TDelegate> expression) 
+            where TDelegate : class
+        {
+#if !WINDOWS_PHONE
+			return expression.Compile();
+#else
+            return ExpressionCompiler.ExpressionCompiler.Compile(expression);
+#endif
+        }
 	}
 }

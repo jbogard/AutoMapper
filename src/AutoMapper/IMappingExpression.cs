@@ -31,6 +31,8 @@ namespace AutoMapper
         void As<T>();
         IMappingExpression<TSource, TDestination> MaxDepth(int depth);
         IMappingExpression<TSource, TDestination> ConstructUsingServiceLocator();
+        
+        IMappingExpression<TDestination, TSource> ReverseMap();
     }
 
     public interface IMemberConfigurationExpression

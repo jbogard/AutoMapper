@@ -20,7 +20,9 @@ namespace AutoMapper
     	object DynamicMap(object source, Type sourceType, Type destinationType);
 		void DynamicMap<TSource, TDestination>(TSource source, TDestination destination);
     	void DynamicMap(object source, object destination, Type sourceType, Type destinationType);
+#if !WINDOWS_PHONE
         Expression<Func<TSource, TDestination>> CreateMapExpression<TSource, TDestination>();
+#endif
     }
 }
 

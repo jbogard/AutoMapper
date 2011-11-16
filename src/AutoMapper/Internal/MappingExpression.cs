@@ -111,12 +111,14 @@ namespace AutoMapper
 	{
 		private readonly TypeMap _typeMap;
 		private readonly Func<Type, object> _serviceCtor;
-		private PropertyMap _propertyMap;
+	    private readonly IProfileExpression _configurationContainer;
+	    private PropertyMap _propertyMap;
 
-		public MappingExpression(TypeMap typeMap, Func<Type, object> serviceCtor)
+		public MappingExpression(TypeMap typeMap, Func<Type, object> serviceCtor, IProfileExpression configurationContainer)
 		{
 			_typeMap = typeMap;
 			_serviceCtor = serviceCtor;
+		    _configurationContainer = configurationContainer;
 		}
 
 		public IMappingExpression<TSource, TDestination> ForMember(Expression<Func<TDestination, object>> destinationMember,
@@ -125,7 +127,7 @@ namespace AutoMapper
 		    var memberInfo = ReflectionHelper.FindProperty(destinationMember);
 		    IMemberAccessor destProperty = memberInfo.ToMemberAccessor();
 			ForDestinationMember(destProperty, memberOptions);
-			return new MappingExpression<TSource, TDestination>(_typeMap, _serviceCtor);
+            return new MappingExpression<TSource, TDestination>(_typeMap, _serviceCtor, _configurationContainer);
 		}
 
 		public IMappingExpression<TSource, TDestination> ForMember(string name,
@@ -133,7 +135,7 @@ namespace AutoMapper
 		{
 			IMemberAccessor destProperty = new PropertyAccessor(typeof(TDestination).GetProperty(name));
 			ForDestinationMember(destProperty, memberOptions);
-			return new MappingExpression<TSource, TDestination>(_typeMap, _serviceCtor);
+            return new MappingExpression<TSource, TDestination>(_typeMap, _serviceCtor, _configurationContainer);
 		}
 
 		public void ForAllMembers(Action<IMemberConfigurationExpression<TSource>> memberOptions)
@@ -379,6 +381,11 @@ namespace AutoMapper
         public void As<T>()
         {
             _typeMap.DestinationTypeOverride = typeof(T);
+        }
+
+        public IMappingExpression<TDestination, TSource> ReverseMap()
+        {
+            return _configurationContainer.CreateMap<TDestination, TSource>();
         }
 
         private Func<ResolutionContext, TServiceType> BuildCtor<TServiceType>(Type type)
