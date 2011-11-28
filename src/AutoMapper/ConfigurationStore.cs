@@ -415,8 +415,8 @@ namespace AutoMapper
 			var destInfo = new TypeInfo(typeof(TDestination));
 			foreach (var destProperty in destInfo.GetPublicWriteAccessors())
 			{
-				object[] attrs = destProperty.GetCustomAttributes(true);
-				if (attrs.Any(x => x is IgnoreMapAttribute))
+				object[] attrs = destProperty.GetCustomAttributes(typeof(IgnoreMapAttribute), true);
+				if (attrs.Any())
 				{
 					mappingExp = mappingExp.ForMember(destProperty.Name, y => y.Ignore());
 				}
@@ -432,8 +432,8 @@ namespace AutoMapper
 			TypeInfo destInfo = new TypeInfo(destinationType);
 			foreach (var destProperty in destInfo.GetPublicWriteAccessors())
 			{
-				object[] attrs = destProperty.GetCustomAttributes(true);
-				if (attrs.Any(x => x is IgnoreMapAttribute))
+				object[] attrs = destProperty.GetCustomAttributes(typeof(IgnoreMapAttribute), true);
+				if (attrs.Any())
 				{
 					mappingExp = mappingExp.ForMember(destProperty.Name, y => y.Ignore());
 				}

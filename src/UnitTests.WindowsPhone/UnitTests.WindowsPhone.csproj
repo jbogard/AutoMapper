@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.20506</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{6AC0EFB3-BCF0-4828-9C03-12AF20164558}</ProjectGuid>
+    <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>AutoMapper.UnitTests.WindowsPhone</RootNamespace>
+    <AssemblyName>AutoMapper.UnitTests.WindowsPhone</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <TargetFrameworkProfile>WindowsPhone71</TargetFrameworkProfile>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\Windows Phone 7.1\mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.framework">
+      <HintPath>..\..\lib\NUnit.Silverlight\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.silverlight">
+      <HintPath>..\..\lib\NUnit.Silverlight\nunit.silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="Should.Core.Silverlight">
+      <HintPath>..\..\lib\Should.Core.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="Should.Silverlight">
+      <HintPath>..\..\lib\Should.Silverlight.dll</HintPath>
+    </Reference>
+    <Reference Include="system, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\Windows Phone 7.1\system.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\Windows Phone 7.1\System.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AutoMapper.WindowsPhone\AutoMapper.WindowsPhone.csproj">
+      <Project>{5C2653AA-21BC-4405-88B3-AEAE566C2CD1}</Project>
+      <Name>AutoMapper.WindowsPhone</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\UnitTests.Silverlight\NBehaveShim\ActionSpecification.cs">
+      <Link>NBehaveShim\ActionSpecification.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests.Silverlight\NBehaveShim\Extensions.cs">
+      <Link>NBehaveShim\Extensions.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests.Silverlight\NBehaveShim\IActionSpecification.cs">
+      <Link>NBehaveShim\IActionSpecification.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests.Silverlight\NBehaveShim\NUnitSpecBase.cs">
+      <Link>NBehaveShim\NUnitSpecBase.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests.Silverlight\NBehaveShim\SpecBase.cs">
+      <Link>NBehaveShim\SpecBase.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests.Silverlight\NBehaveShim\ThrowingAction.cs">
+      <Link>NBehaveShim\ThrowingAction.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests\ArraysAndLists.cs">
+      <Link>ArraysAndLists.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests\AssertionExtensions.cs">
+      <Link>AssertionExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests\AutoMapperSpecBase.cs">
+      <Link>AutoMapperSpecBase.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests\General.cs">
+      <Link>General.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests\Internal\DelegateFactoryTests.cs">
+      <Link>Internal\DelegateFactoryTests.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests\MemberResolution.cs">
+      <Link>MemberResolution.cs</Link>
+    </Compile>
+    <Compile Include="..\UnitTests\TesterExtensions.cs">
+      <Link>TesterExtensions.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.$(TargetFrameworkProfile).Overrides.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

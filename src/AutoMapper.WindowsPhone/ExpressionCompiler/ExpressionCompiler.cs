@@ -31,22 +31,21 @@ namespace ExpressionCompiler
 {
     public class ExpressionCompiler
     {
-        public static Delegate Compile(LambdaExpression expression)
-        {
+        //public static Delegate Compile(LambdaExpression expression)
+        //{
 
-            System.Linq.jvm.Interpreter inter =
-                new System.Linq.jvm.Interpreter(expression);
-            inter.Validate();
-            return inter.CreateDelegate();
-        }
+        //    System.Linq.jvm.Interpreter inter =
+        //        new System.Linq.jvm.Interpreter(expression);
+        //    inter.Validate();
+        //    return inter.CreateDelegate();
+        //}
 
         public static TDelegate Compile<TDelegate>(Expression<TDelegate> expression)
-            where TDelegate : class
         {
-            System.Linq.jvm.Interpreter inter =
-                new System.Linq.jvm.Interpreter(expression);
+            System.Linq.jvm.Interpreter<TDelegate> inter =
+                new System.Linq.jvm.Interpreter<TDelegate>(expression);
             inter.Validate();
-            return inter.CreateDelegate() as TDelegate;
+            return inter.CreateDelegate();
         }
     }
 }

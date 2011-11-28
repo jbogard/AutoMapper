@@ -29,11 +29,11 @@ using System.Linq.Expressions;
 
 namespace System.Linq.jvm {
 
-	class ExpressionValidator : ExpressionVisitor
+	class ExpressionValidator<TDelegate> : ExpressionVisitor
 	{
-		LambdaExpression lambda;
+        Expression<TDelegate> lambda;
 
-		public ExpressionValidator (LambdaExpression lambda)
+		public ExpressionValidator (Expression<TDelegate> lambda)
 		{
 			this.lambda = lambda;
 		}

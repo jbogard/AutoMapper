@@ -31,7 +31,7 @@ using System.Reflection;
 
 namespace System.Linq.jvm {
 
-	class Interpreter {
+	class Interpreter<TDelegate> {
 
 		class VoidTypeMarker {
 		}
@@ -39,11 +39,11 @@ namespace System.Linq.jvm {
 		static readonly Type VoidMarker = typeof (VoidTypeMarker);
 		static readonly MethodInfo [] delegates = new MethodInfo [5];
 
-		LambdaExpression lambda;
+        Expression<TDelegate> lambda;
 
 		static Interpreter ()
 		{
-			var methods = from method in typeof (Interpreter).GetMethods (
+			var methods = from method in typeof (Interpreter<>).GetMethods (
 							  BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
 						  where method.Name == "GetDelegate"
 						  select method;
@@ -52,22 +52,22 @@ namespace System.Linq.jvm {
 				delegates [method.GetGenericArguments ().Length - 1] = method;
 		}
 
-		public Interpreter (LambdaExpression lambda)
+		public Interpreter (Expression<TDelegate> lambda)
 		{
 			this.lambda = lambda;
 		}
 
-		public Delegate CreateDelegate ()
+		public TDelegate CreateDelegate ()
 		{
 			var types = GetGenericSignature ();
 			var creator = delegates [types.Length - 1].MakeGenericMethod (types);
 
-			return (Delegate) creator.Invoke (this, new object [0]);
+            return (TDelegate)creator.Invoke(this, new object[0]);
 		}
 
 		public void Validate ()
 		{
-			new ExpressionValidator (lambda).Validate ();
+			new ExpressionValidator<TDelegate>(lambda).Validate ();
 		}
 
 		Type [] GetGenericSignature ()
