@@ -10,6 +10,50 @@ namespace AutoMapper.UnitTests
 {
 	namespace MemberResolution
 	{
+	    public class When_mapping_with_underscores_in_member_names : AutoMapperSpecBase
+	    {
+	        private CompanyDto _dest;
+
+	        public class Company
+            {
+                public string Name { get; set; }
+                public virtual ICollection<Location> Company_Locations { get; set; }
+            }
+
+	        public class Location
+	        {
+	        }
+
+	        public class CompanyDto
+            {
+                public string Name { get; set; }
+                public int Company_LocationsCount { get; set; }
+            }
+
+	        protected override void Establish_context()
+	        {
+	            Mapper.Initialize(cfg => cfg.CreateMap<Company, CompanyDto>());
+	        }
+
+	        protected override void Because_of()
+	        {
+	            var source = new Company
+	            {
+	                Name = "Foo",
+	                Company_Locations = new List<Location>()
+	                {
+	                    new Location()
+	                }
+	            };
+	            _dest = Mapper.Map<Company, CompanyDto>(source);
+	        }
+
+	        [Fact]
+	        public void Should_map_the_underscore_property()
+	        {
+	            _dest.Company_LocationsCount.ShouldEqual(1);
+	        }
+	    }
 		public class When_mapping_derived_classes_in_arrays : AutoMapperSpecBase
 		{
 			private DtoObject[] _result;
