@@ -161,10 +161,5 @@ namespace AutoMapper
         /// Seal the configuration and optimize maps
         /// </summary>
 		void Seal();
-
-        /// <summary>
-        /// Mapping via a data reader will yield return each item, keeping a data reader open instead of eagerly evaluating
-        /// </summary>
-	    void EnableYieldReturnForDataReaderMapper();
 	}
 }

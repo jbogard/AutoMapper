@@ -104,11 +104,6 @@ namespace AutoMapper
 	        get { return GetProfile(DefaultProfileName).ConstructorMappingEnabled; }
 	    }
 
-	    public bool DataReaderMapperYieldReturnEnabled
-	    {
-            get { return GetProfile(DefaultProfileName).DataReaderMapperYieldReturnEnabled; }
-	    }
-
 	    public IEnumerable<MethodInfo> SourceExtensionMethods
 	    {
 	        get
@@ -165,11 +160,6 @@ namespace AutoMapper
 	    public void DisableConstructorMapping()
 	    {
 	        GetProfile(DefaultProfileName).ConstructorMappingEnabled = false;
-	    }
-
-	    public void EnableYieldReturnForDataReaderMapper()
-	    {
-	        GetProfile(DefaultProfileName).DataReaderMapperYieldReturnEnabled = true;
 	    }
 
 	    public void Seal()

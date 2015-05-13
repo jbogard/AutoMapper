@@ -93,11 +93,6 @@ namespace AutoMapper
 	        get { return _configurator.ConstructorMappingEnabled; }
 	    }
 
-	    public bool DataReaderMapperYieldReturnEnabled
-	    {
-            get { return _configurator.DataReaderMapperYieldReturnEnabled; }
-	    }
-
         public IEnumerable<MethodInfo> SourceExtensionMethods
         {
             get { return GetProfile().SourceExtensionMethods; }

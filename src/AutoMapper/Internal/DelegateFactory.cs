@@ -3,7 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+#if NET4
+using System.Reflection.Emit;
+#endif
 using System.Runtime.CompilerServices;
+using System.Security;
+
+[assembly: AllowPartiallyTrustedCallers]
+[assembly: SecurityTransparent]
+#if NET4
+[assembly: SecurityRules(SecurityRuleSet.Level2, SkipVerificationInFullTrust = true)]
+#endif
 
 namespace AutoMapper
 {
@@ -17,6 +27,18 @@ namespace AutoMapper
 
         public LateBoundMethod CreateGet(MethodInfo method)
         {
+#if NET4
+            var dm = new DynamicMethod("", typeof(object), new[] { typeof(object), typeof(object[]) }, method.DeclaringType, true);
+            var il = dm.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Castclass, method.DeclaringType);
+            il.Emit(OpCodes.Callvirt, method);
+            if (!method.ReturnType.IsClass())
+                il.Emit(OpCodes.Box, method.ReturnType);
+            il.Emit(OpCodes.Ret);
+            var func = (LateBoundMethod)method.CreateDelegate(typeof(LateBoundMethod));
+            return func;
+#else
             ParameterExpression instanceParameter = Expression.Parameter(typeof(object), "target");
             ParameterExpression argumentsParameter = Expression.Parameter(typeof(object[]), "arguments");
 
@@ -43,10 +65,24 @@ namespace AutoMapper
                 argumentsParameter);
 
             return lambda.Compile();
+#endif
+            //return (LateBoundMethod) method.CreateDelegate(typeof(LateBoundMethod), null);
         }
 
         public LateBoundPropertyGet CreateGet(PropertyInfo property)
         {
+#if NET4
+            var method = new DynamicMethod("", typeof(object), new[] { typeof(object) }, property.DeclaringType, true);
+            var il = method.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Castclass, property.DeclaringType);
+            il.Emit(OpCodes.Callvirt, property.GetMethod);
+            if (!property.PropertyType.IsClass())
+                il.Emit(OpCodes.Box, property.PropertyType);
+            il.Emit(OpCodes.Ret);
+            var func = (LateBoundPropertyGet)method.CreateDelegate(typeof(LateBoundPropertyGet));
+            return func;
+#else
             ParameterExpression instanceParameter = Expression.Parameter(typeof(object), "target");
 
             MemberExpression member = Expression.Property(Expression.Convert(instanceParameter, property.DeclaringType), property);
@@ -57,10 +93,24 @@ namespace AutoMapper
                 );
 
             return lambda.Compile();
+#endif
         }
 
         public LateBoundFieldGet CreateGet(FieldInfo field)
         {
+#if NET4
+            var method = new DynamicMethod("", typeof(object), new[] { typeof(object) }, field.DeclaringType, true);
+            var il = method.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Castclass, field.DeclaringType);
+            il.Emit(OpCodes.Ldfld, field);
+            if (!field.FieldType.IsClass())
+                il.Emit(OpCodes.Box, field.FieldType);
+            il.Emit(OpCodes.Ret);
+            var func = (LateBoundFieldGet)method.CreateDelegate(typeof(LateBoundFieldGet));
+            return func;
+
+#else
             ParameterExpression instanceParameter = Expression.Parameter(typeof(object), "target");
 
             MemberExpression member = Expression.Field(Expression.Convert(instanceParameter, field.DeclaringType), field);
@@ -71,10 +121,23 @@ namespace AutoMapper
                 );
 
             return lambda.Compile();
+#endif
         }
 
         public LateBoundFieldSet CreateSet(FieldInfo field)
         {
+#if NET4
+            DynamicMethod method2 = new DynamicMethod("", typeof(void), new[] { typeof(object), typeof(object) }, true);
+            var ilgen = method2.GetILGenerator();
+            ilgen.Emit(OpCodes.Ldarg_0);
+            ilgen.Emit(OpCodes.Castclass, field.DeclaringType);
+            ilgen.Emit(OpCodes.Ldarg_1);
+            ilgen.Emit(field.FieldType.IsClass() ? OpCodes.Castclass : OpCodes.Unbox_Any, field.FieldType);
+
+            ilgen.Emit(OpCodes.Stfld, field);
+            ilgen.Emit(OpCodes.Ret);
+            return (LateBoundFieldSet)method2.CreateDelegate(typeof(LateBoundFieldSet));
+#else
             ParameterExpression instanceParameter = Expression.Parameter(typeof(object), "target");
             ParameterExpression valueParameter = Expression.Parameter(typeof(object), "value");
 
@@ -88,10 +151,25 @@ namespace AutoMapper
                 );
 
             return lambda.Compile();
+#endif
         }
 
         public LateBoundPropertySet CreateSet(PropertyInfo property)
         {
+#if NET4
+            DynamicMethod method2 = new DynamicMethod("", typeof(void), new[] { typeof(object), typeof(object) }, true);
+            var ilgen = method2.GetILGenerator();
+            ilgen.Emit(OpCodes.Ldarg_0);
+            ilgen.Emit(OpCodes.Castclass, property.DeclaringType);
+            ilgen.Emit(OpCodes.Ldarg_1);
+            ilgen.Emit(property.PropertyType.IsClass() ? OpCodes.Castclass : OpCodes.Unbox_Any, property.PropertyType);
+
+            ilgen.Emit(OpCodes.Callvirt, property.SetMethod);
+            ilgen.Emit(OpCodes.Ret);
+            return (LateBoundPropertySet)method2.CreateDelegate(typeof(LateBoundPropertySet));
+
+            //return (LateBoundPropertySet)property.SetMethod.CreateDelegate(typeof(LateBoundPropertySet), null);
+#else
             ParameterExpression instanceParameter = Expression.Parameter(typeof(object), "target");
             ParameterExpression valueParameter = Expression.Parameter(typeof(object), "value");
 
@@ -106,13 +184,37 @@ namespace AutoMapper
 
 
             return lambda.Compile();
+#endif
         }
 
         public LateBoundCtor CreateCtor(Type type)
         {
             LateBoundCtor ctor = _ctorCache.GetOrAdd(type, t =>
             {
-                //handle valuetypes
+#if NET4
+                DynamicMethod dm = new DynamicMethod("", typeof(object), new[] { typeof(object[]) }, true);
+                var ilgen = dm.GetILGenerator();
+
+                var ctorInfo = type.GetDeclaredConstructors()
+                    .Where(ci => !ci.IsStatic())
+                    .First(c => c.GetParameters().All(p => p.IsOptional));
+
+                int i = 0;
+                foreach (var pi in ctorInfo.GetParameters())
+                {
+                    ilgen.Emit(OpCodes.Ldarg_0);
+                    ilgen.Emit(OpCodes.Ldc_I4, i);
+                    ilgen.Emit(OpCodes.Ldelem_Ref);
+                    ilgen.Emit(pi.ParameterType.IsClass() ? OpCodes.Castclass : OpCodes.Unbox_Any, pi.ParameterType);
+                    i++;
+                }
+
+                ilgen.Emit(OpCodes.Newobj, ctorInfo);
+                ilgen.Emit(OpCodes.Ret);
+
+                return (LateBoundCtor)dm.CreateDelegate(typeof(LateBoundCtor));
+#else
+    //handle valuetypes
                 if (!type.IsClass())
                 {
                     var ctorExpression = Expression.Lambda<LateBoundCtor>(Expression.Convert(Expression.New(type), typeof(object)));
@@ -138,6 +240,7 @@ namespace AutoMapper
                     var ctorExpression = Expression.Lambda<LateBoundCtor>(Expression.Convert(Expression.New(ctorWithOptionalArgs,args), typeof(object)));
                     return ctorExpression.Compile();
                 }
+#endif
             });
 
             return ctor;

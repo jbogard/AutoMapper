@@ -40,7 +40,6 @@ namespace AutoMapper
         public IEnumerable<MemberNameReplacer> MemberNameReplacers { get { return _memberNameReplacers; } }
         public IEnumerable<AliasedMember> Aliases { get { return _aliases; } }
         public bool ConstructorMappingEnabled { get; set; }
-        public bool DataReaderMapperYieldReturnEnabled { get; set; }
         public IEnumerable<MethodInfo> SourceExtensionMethods { get { return _sourceExtensionMethods; } }
 
 
