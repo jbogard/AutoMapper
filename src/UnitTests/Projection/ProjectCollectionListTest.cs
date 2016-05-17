@@ -3,7 +3,8 @@
 
 namespace AutoMapper.UnitTests.Projection
 {
-	using System.Collections.Generic;
+    using System;
+    using System.Collections.Generic;
 	using System.Linq;
 
 	using AutoMapper;
@@ -12,21 +13,25 @@ namespace AutoMapper.UnitTests.Projection
 
     public class ProjectCollectionListTest
 	{
-		private const string Street1 = "Street1";
+        private MapperConfiguration _config;
+        private const string Street1 = "Street1";
 		private const string Street2 = "Street2";
 
         public ProjectCollectionListTest()
-		{
-			Mapper.CreateMap<Address, AddressDto>();
-			Mapper.CreateMap<Customer, CustomerDto>();
-		}
+        {
+            _config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Address, AddressDto>();
+                cfg.CreateMap<Customer, CustomerDto>();
+            });
+        }
 
-		[Fact(Skip = "EF doesn't support null values in expressions")]
+        [Fact(Skip = "EF doesn't support null values in expressions")]
 		public void ProjectWithNullCollectionSourceProperty()
 		{
 			var customers = new[] { new Customer() }.AsQueryable();
 
-			var mapped = customers.Project().To<CustomerDto>().SingleOrDefault();
+			var mapped = customers.ProjectTo<CustomerDto>(_config).SingleOrDefault();
 			mapped.ShouldNotBeNull();
 			mapped.Addresses.ShouldBeNull();
 		}
@@ -38,7 +43,7 @@ namespace AutoMapper.UnitTests.Projection
 
 			var customers = new[] { customer }.AsQueryable();
 
-			var mapped = customers.Project().To<CustomerDto>().SingleOrDefault();
+			var mapped = customers.ProjectTo<CustomerDto>(_config).SingleOrDefault();
 
 			mapped.ShouldNotBeNull();
 
@@ -67,9 +72,31 @@ namespace AutoMapper.UnitTests.Projection
 			public IList<AddressDto> Addresses { get; set; }
 		}
 
-		public class AddressDto
+		public class AddressDto : IEquatable<AddressDto>
 		{
-			public string Street { get; set; }
+		    public bool Equals(AddressDto other)
+		    {
+		        if (ReferenceEquals(null, other)) return false;
+		        if (ReferenceEquals(this, other)) return true;
+		        return string.Equals(Street, other.Street);
+		    }
+
+		    public override int GetHashCode()
+		    {
+		        return (Street != null ? Street.GetHashCode() : 0);
+		    }
+
+		    public static bool operator ==(AddressDto left, AddressDto right)
+		    {
+		        return Equals(left, right);
+		    }
+
+		    public static bool operator !=(AddressDto left, AddressDto right)
+		    {
+		        return !Equals(left, right);
+		    }
+
+		    public string Street { get; set; }
 
 			public override string ToString()
 			{

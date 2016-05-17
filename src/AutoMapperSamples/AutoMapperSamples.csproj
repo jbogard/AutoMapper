@@ -71,13 +71,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\CommonAssemblyInfo.cs">
-      <Link>CommonAssemblyInfo.cs</Link>
-    </Compile>
     <Compile Include="AdvancedMappers\MapToExistingObjects.cs" />
     <Compile Include="CommonBaseClassConfiguration.cs" />
     <Compile Include="ConfigurationValidation.cs" />
-    <Compile Include="AdvancedMappers\DynamicMapping.cs" />
     <Compile Include="Configuration\Initialization.cs" />
     <Compile Include="Configuration\Profiles.cs" />
     <Compile Include="GlobalTypeConverters.cs" />
@@ -93,20 +89,11 @@
     <Compile Include="Mappers\IListSources.cs" />
     <Compile Include="Mappers\Lists.cs" />
     <Compile Include="Mappers\Arrays.cs" />
-    <Compile Include="Mappers\Strings.cs" />
+    <Compile Include="Mappers\Query.cs" />
+    <Compile Include="Mappers\QuerySourceInjection.cs" />
     <Compile Include="Mappers\TypeConverters.cs" />
     <Compile Include="NestedMappings.cs" />
     <Compile Include="Projection.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\AutoMapper\AutoMapper.csproj">
-      <Project>{DDF551F9-B27D-4283-BFA0-E7068E05967D}</Project>
-      <Name>AutoMapper</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\AutoMapper\AutoMapper.Net4.csproj">
-      <Project>{8c955148-fa96-4f0d-880d-abb6770f54e9}</Project>
-      <Name>AutoMapper.Net4</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
@@ -127,6 +114,12 @@
       <ProductName>Windows Installer 3.1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AutoMapper.Net4\AutoMapper.Net4.csproj">
+      <Project>{8c955148-fa96-4f0d-880d-abb6770f54e9}</Project>
+      <Name>AutoMapper.Net4</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

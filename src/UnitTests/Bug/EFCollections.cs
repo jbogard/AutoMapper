@@ -16,11 +16,11 @@ namespace AutoMapper.UnitTests.Bug
 
         }
 
-        public class _Source : Source
+        public class OtherSource : Source
         {
         }
 
-        public class _Child : Child
+        public class OtherChild : Child
         {
 
         }
@@ -32,23 +32,20 @@ namespace AutoMapper.UnitTests.Bug
 
         public class DestChild {}
 
-        protected override void Establish_context()
+        protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
         {
-            Mapper.Initialize(cfg =>
-            {
-                cfg.CreateMap<Source, Dest>();
-                cfg.CreateMap<Child, DestChild>();
-            });
-        }
+            cfg.CreateMap<Source, Dest>();
+            cfg.CreateMap<Child, DestChild>();
+        });
 
         protected override void Because_of()
         {
-            var source = new _Source
+            var source = new OtherSource
             {
                 Children = new Collection<Child>
                 {
-                    new _Child(),
-                    new _Child()
+                    new OtherChild(),
+                    new OtherChild()
                 }
             };
             _dest = Mapper.Map<Source, Dest>(source);

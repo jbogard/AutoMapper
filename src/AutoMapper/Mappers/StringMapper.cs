@@ -1,19 +1,24 @@
+﻿using System.Linq.Expressions;
+
 namespace AutoMapper.Mappers
 {
-	public class StringMapper : IObjectMapper
-	{
-		public object Map(ResolutionContext context, IMappingEngineRunner mapper)
-		{
-			if (context.SourceValue == null)
-			{
-				return mapper.FormatValue(context.CreateValueContext(null));
-			}
-			return mapper.FormatValue(context);
-		}
+    public class StringMapper : IObjectMapExpression
+    {
+        public object Map(ResolutionContext context)
+        {
+            return context.SourceValue?.ToString();
+        }
 
-		public bool IsMatch(ResolutionContext context)
-		{
-			return context.DestinationType.Equals(typeof(string));
-		}
-	}
+        public bool IsMatch(TypePair context)
+        {
+            return context.DestinationType == typeof(string) && context.SourceType != typeof(string);
+        }
+
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        {
+            return Expression.Condition(Expression.Equal(sourceExpression, Expression.Default(sourceExpression.Type)),
+                Expression.Constant(null, typeof (string)),
+                Expression.Call(sourceExpression, typeof (object).GetMethod("ToString")));
+        }
+    }
 }

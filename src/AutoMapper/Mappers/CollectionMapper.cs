@@ -1,69 +1,58 @@
-using System;
-using System.Collections.Generic;
-using AutoMapper.Internal;
+using System.Collections;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace AutoMapper.Mappers
 {
-    public class CollectionMapper : IObjectMapper
+    using System.Collections.Generic;
+    using System.Reflection;
+    using Configuration;
+
+    public class CollectionMapper :  IObjectMapExpression
     {
-        public object Map(ResolutionContext context, IMappingEngineRunner mapper)
+        public static TDestination Map<TSource, TSourceItem, TDestination, TDestinationItem>(TSource source, TDestination destination, ResolutionContext context)
+            where TSource : IEnumerable
+            where TDestination : class, ICollection<TDestinationItem>
         {
-            Type genericType = typeof(EnumerableMapper<,>);
+            if (source == null && context.Mapper.ShouldMapSourceCollectionAsNull(context))
+                return null;
 
-            var collectionType = context.DestinationType;
-            var elementType = TypeHelper.GetElementType(context.DestinationType);
-            
-            var enumerableMapper = genericType.MakeGenericType(collectionType, elementType);
+            TDestination list = destination ?? (
+                typeof (TDestination).IsInterface()
+                    ? new List<TDestinationItem>() as TDestination
+                    : (TDestination) (context.ConfigurationProvider.AllowNullDestinationValues
+                ? ObjectCreator.CreateNonNullValue(typeof(TDestination))
+                : ObjectCreator.CreateObject(typeof(TDestination))));
 
-            var objectMapper = (IObjectMapper)Activator.CreateInstance(enumerableMapper);
+            list.Clear();
 
-            return objectMapper.Map(context, mapper);
+            foreach (var item in (IEnumerable) source ?? Enumerable.Empty<object>())
+                list.Add((TDestinationItem)context.Mapper.Map(item, default(TDestinationItem), typeof(TSourceItem), typeof(TDestinationItem), context));
+
+            return list;
         }
 
-        public bool IsMatch(ResolutionContext context)
+        private static readonly MethodInfo MapMethodInfo = typeof(CollectionMapper).GetAllMethods().First(_ => _.IsStatic);
+
+        public object Map(ResolutionContext context)
+        {
+            return
+                MapMethodInfo.MakeGenericMethod(context.SourceType, TypeHelper.GetElementType(context.SourceType), context.DestinationType, TypeHelper.GetElementType(context.DestinationType))
+                    .Invoke(null, new[] {context.SourceValue, context.DestinationValue, context});
+        }
+
+        public bool IsMatch(TypePair context)
         {
             var isMatch = context.SourceType.IsEnumerableType() && context.DestinationType.IsCollectionType();
 
             return isMatch;
         }
 
-        #region Nested type: EnumerableMapper
-
-        private class EnumerableMapper<TCollection, TElement> : EnumerableMapperBase<TCollection>
-            where TCollection : ICollection<TElement>
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
         {
-            public override bool IsMatch(ResolutionContext context)
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void SetElementValue(TCollection destination, object mappedValue, int index)
-            {
-                destination.Add((TElement)mappedValue);
-            }
-
-            protected override void ClearEnumerable(TCollection enumerable)
-            {
-                enumerable.Clear();
-            }
-
-            protected override TCollection CreateDestinationObjectBase(Type destElementType, int sourceLength)
-            {
-                Object collection;
-                
-                if (typeof(TCollection).IsInterface)
-                {
-                    collection = new List<TElement>();
-                }
-                else
-                {
-                    collection = ObjectCreator.CreateDefaultValue(typeof(TCollection));
-                }
-
-                return (TCollection)collection;
-            }
+            return Expression.Call(null, 
+                MapMethodInfo.MakeGenericMethod(sourceExpression.Type, TypeHelper.GetElementType(sourceExpression.Type), destExpression.Type, TypeHelper.GetElementType(destExpression.Type)),
+                    sourceExpression, destExpression, contextExpression);
         }
-
-        #endregion
     }
 }

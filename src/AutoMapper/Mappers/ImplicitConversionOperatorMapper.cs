@@ -1,35 +1,46 @@
-using System.Reflection;
-using System.Linq;
+using System.Linq.Expressions;
 
 namespace AutoMapper.Mappers
 {
-	public class ImplicitConversionOperatorMapper : IObjectMapper
-	{
-		public object Map(ResolutionContext context, IMappingEngineRunner mapper)
-		{
-		    var implicitOperator = GetImplicitConversionOperator(context);
+    using System.Linq;
+    using System.Reflection;
+    using Configuration;
 
-		    return implicitOperator.Invoke(null, new[] {context.SourceValue});
-		}
+    public class ImplicitConversionOperatorMapper : IObjectMapExpression
+    {
+        public object Map(ResolutionContext context)
+        {
+            var implicitOperator = GetImplicitConversionOperator(context.Types);
 
-		public bool IsMatch(ResolutionContext context)
-		{
+            return implicitOperator.Invoke(null, new[] {context.SourceValue});
+        }
+
+        public bool IsMatch(TypePair context)
+        {
             var methodInfo = GetImplicitConversionOperator(context);
 
-		    return methodInfo != null;
-		}
+            return methodInfo != null;
+        }
 
-	    private static MethodInfo GetImplicitConversionOperator(ResolutionContext context)
-	    {
-	        var sourceTypeMethod = context.SourceType.GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Where(mi => mi.Name == "op_Implicit")
-                .Where(mi => mi.ReturnType == context.DestinationType)
-                .FirstOrDefault();
+        private static MethodInfo GetImplicitConversionOperator(TypePair context)
+        {
+            var destinationType = context.DestinationType;
+            if(destinationType.IsNullableType())
+            {
+                destinationType = destinationType.GetTypeOfNullable();
+            }
+            var sourceTypeMethod = context.SourceType
+                .GetDeclaredMethods()
+                .FirstOrDefault(mi => mi.IsPublic && mi.IsStatic && mi.Name == "op_Implicit" && mi.ReturnType == destinationType);
 
-	        var destTypeMethod = context.DestinationType.GetMethod("op_Implicit", new[] {context.SourceType});
+            return sourceTypeMethod ?? destinationType.GetMethod("op_Implicit", new[] { context.SourceType });
+        }
 
-	        return sourceTypeMethod ?? destTypeMethod;
-	    }
-	}
 
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        {
+            var implicitOperator = GetImplicitConversionOperator(new TypePair(sourceExpression.Type, destExpression.Type));
+            return Expression.Call(null, implicitOperator, sourceExpression);
+        }
+    }
 }

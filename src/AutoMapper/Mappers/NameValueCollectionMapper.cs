@@ -1,27 +1,45 @@
-﻿using System.Collections.Specialized;
+﻿using System;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 
+#if !PORTABLE
 namespace AutoMapper.Mappers
 {
-    public class NameValueCollectionMapper : IObjectMapper
+    using System.Collections.Specialized;
+
+    public class NameValueCollectionMapper : IObjectMapExpression
     {
-        public object Map(ResolutionContext context, IMappingEngineRunner mapper)
+        public static NameValueCollection Map(NameValueCollection source)
         {
-            if (!IsMatch(context) || context.SourceValue == null)
+            if (source == null)
                 return null;
-            
+
             var nvc = new NameValueCollection();
-            var source = context.SourceValue as NameValueCollection;
             foreach (var s in source.AllKeys)
                 nvc.Add(s, source[s]);
 
             return nvc;
         }
 
-        public bool IsMatch(ResolutionContext context)
+        private static readonly MethodInfo MapMethodInfo = typeof(NameValueCollectionMapper).GetAllMethods().First(_ => _.IsStatic);
+
+        public object Map(ResolutionContext context)
         {
-            return 
-                context.SourceType == typeof(NameValueCollection) &&
+            return MapMethodInfo.Invoke(null, new [] {context.SourceValue});
+        }
+
+        public bool IsMatch(TypePair context)
+        {
+            return
+                context.SourceType == typeof (NameValueCollection) &&
                 context.DestinationType == typeof (NameValueCollection);
+        }
+
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        {
+            return Expression.Call(null, MapMethodInfo, sourceExpression);
         }
     }
 }
+#endif

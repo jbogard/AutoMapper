@@ -1,5 +1,8 @@
 build/
 release/
+scripts/
+.dotnet
+TestResults/
 *.suo
 *.user
 bin
@@ -16,3 +19,11 @@ AppPackages/
 packages
 *.orig
 *.DotSettings
+*.ide/
+.nuget
+project.lock.json
+.vs
+
+# JetBrains Rider
+.idea/
+*.sln.iml

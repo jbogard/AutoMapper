@@ -7,23 +7,35 @@ namespace AutoMapper.Mappers
         private static readonly IObjectMapper[] _initialMappers =
         {
             new ExpressionMapper(), 
-            new TypeMapMapper(TypeMapObjectMapperRegistry.Mappers),
-            new StringMapper(),
-            new AssignableArrayMapper(), 
             new FlagsEnumMapper(),
-            new EnumMapper(),
+            new StringToEnumMapper(), 
+            new EnumToEnumMapper(), 
+            new EnumToUnderlyingTypeMapper(),
+            new MultidimensionalArrayMapper(),
             new PrimitiveArrayMapper(),
             new ArrayMapper(),
             new EnumerableToDictionaryMapper(),
+#if !PORTABLE
+            new NameValueCollectionMapper(),
+#endif
             new DictionaryMapper(),
             new ReadOnlyCollectionMapper(),
+            new HashSetMapper(),
             new CollectionMapper(),
             new EnumerableMapper(),
+            new StringMapper(),
             new AssignableMapper(),
+#if !PORTABLE
+            new TypeConverterMapper(),
+#endif
             new NullableSourceMapper(),
-            new NullableMapper(),
             new ImplicitConversionOperatorMapper(),
-            new ExplicitConversionOperatorMapper()
+            new ExplicitConversionOperatorMapper(),
+            new ConvertMapper(),
+            new FromStringDictionaryMapper(),
+            new ToStringDictionaryMapper(),
+            new FromDynamicMapper(),
+            new ToDynamicMapper()
         };
 
         private static readonly List<IObjectMapper> _mappers = new List<IObjectMapper>(_initialMappers);
@@ -31,10 +43,7 @@ namespace AutoMapper.Mappers
         /// <summary>
         /// Extension point for modifying list of object mappers
         /// </summary>
-        public static IList<IObjectMapper> Mappers
-        {
-            get { return _mappers; }
-        }
+        public static IList<IObjectMapper> Mappers => _mappers;
 
         /// <summary>
         /// Reset mapper registry to built-in values

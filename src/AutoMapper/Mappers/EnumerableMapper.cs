@@ -1,83 +1,60 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using AutoMapper.Internal;
+using System.Linq.Expressions;
 
 namespace AutoMapper.Mappers
 {
-	public class EnumerableMapper : EnumerableMapperBase<IList>
-	{
-		public override bool IsMatch(ResolutionContext context)
-		{
-			// destination type must be IEnumerable interface or a class implementing at least IList 
-			return ((context.DestinationType.IsInterface && context.DestinationType.IsEnumerableType()) || context.DestinationType.IsListType())
-				&& (context.SourceType.IsEnumerableType());
-		}
+    using System;
+    using System.Collections;
+    using System.Reflection;
+    using Configuration;
 
-		protected override void SetElementValue(IList destination, object mappedValue, int index)
-		{
-			destination.Add(mappedValue);
-		}
+    public class EnumerableMapper : IObjectMapExpression
+    {
+        public static TDestination Map<TSource, TDestination, TDestinationElement>(TSource source, TDestination destination, ResolutionContext context)
+            where TSource : class, IEnumerable
+            where TDestination : class, IEnumerable
+        {
+            if (source == null && context.Mapper.ShouldMapSourceCollectionAsNull(context))
+                return null;
 
-		protected override void ClearEnumerable(IList enumerable)
-		{
-			enumerable.Clear();
-		}
+            var sourceElementType = TypeHelper.GetElementType(typeof(TSource), source);
+            var destElementType = typeof (TDestinationElement);
+            source = source ?? (context.ConfigurationProvider.AllowNullDestinationValues
+                ? ObjectCreator.CreateNonNullValue(typeof(TSource))
+                : ObjectCreator.CreateObject(typeof(TSource))) as TSource;
 
-		protected override IList CreateDestinationObjectBase(Type destElementType, int sourceLength)
-		{
-			return ObjectCreator.CreateList(destElementType);
-		}
-	}
+            TDestination destEnumeration = (destination is IList && !(destination is Array))
+                ? destination
+                : (TDestination) ObjectCreator.CreateList(destElementType);
 
-	public class EnumerableToDictionaryMapper : IObjectMapper
-	{
-		private static readonly Type KvpType = typeof(KeyValuePair<,>);
+            var list = destEnumeration as IList<TDestinationElement>;
+            list.Clear();
+            
+            foreach (var item in source)
+                list.Add((TDestinationElement)context.Mapper.Map(item, null, sourceElementType, destElementType, context));
 
-		public bool IsMatch(ResolutionContext context)
-		{
-			return (context.DestinationType.IsDictionaryType())
-				&& (context.SourceType.IsEnumerableType())
-				&& (!context.SourceType.IsDictionaryType());
-		}
+            return destEnumeration;
+        }
 
-		public object Map(ResolutionContext context, IMappingEngineRunner mapper)
-		{
-			var sourceEnumerableValue = (IEnumerable)context.SourceValue ?? new object[0];
-			IEnumerable<object> enumerableValue = sourceEnumerableValue.Cast<object>();
+        private static readonly MethodInfo MapMethodInfo = typeof(EnumerableMapper).GetAllMethods().First(_ => _.IsStatic);
 
-			Type sourceElementType = TypeHelper.GetElementType(context.SourceType, sourceEnumerableValue);
-			Type genericDestDictType = context.DestinationType.GetDictionaryType();
-			Type destKeyType = genericDestDictType.GetGenericArguments()[0];
-			Type destValueType = genericDestDictType.GetGenericArguments()[1];
-			Type destKvpType = KvpType.MakeGenericType(destKeyType, destValueType);
+        public object Map(ResolutionContext context)
+        {
+            return MapMethodInfo.MakeGenericMethod(context.SourceType, context.DestinationType, TypeHelper.GetElementType(context.DestinationType)).Invoke(null, new [] { context.SourceValue, context.DestinationValue, context });
+        }
 
-			object destDictionary = ObjectCreator.CreateDictionary(context.DestinationType, destKeyType, destValueType);
-			int count = 0;
+        public bool IsMatch(TypePair context)
+        {
+            // destination type must be IEnumerable interface or a class implementing at least IList 
+            return ((context.DestinationType.IsInterface() && context.DestinationType.IsEnumerableType()) ||
+                    context.DestinationType.IsListType())
+                   && context.SourceType.IsEnumerableType();
+        }
 
-			foreach (object item in enumerableValue)
-			{
-				var typeMap = mapper.ConfigurationProvider.FindTypeMapFor(item, null, sourceElementType, destKvpType);
-
-				Type targetSourceType = typeMap != null ? typeMap.SourceType : sourceElementType;
-				Type targetDestinationType = typeMap != null ? typeMap.DestinationType : destKvpType;
-
-				var newContext = context.CreateElementContext(typeMap, item, targetSourceType, targetDestinationType, count);
-
-				object mappedValue = mapper.Map(newContext);
-				var keyProperty = mappedValue.GetType().GetProperty("Key");
-				object destKey = keyProperty.GetValue(mappedValue, null);
-
-				var valueProperty = mappedValue.GetType().GetProperty("Value");
-				object destValue = valueProperty.GetValue(mappedValue, null);
-
-				genericDestDictType.GetMethod("Add").Invoke(destDictionary, new[] { destKey, destValue });
-
-				count++;
-			}
-
-			return destDictionary;
-		}
-	}
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        {
+            return Expression.Call(null, MapMethodInfo.MakeGenericMethod(sourceExpression.Type, destExpression.Type, TypeHelper.GetElementType(destExpression.Type)), sourceExpression, destExpression, contextExpression);
+        }
+    }
 }

@@ -1,74 +1,53 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using AutoMapper.Internal;
+using System.Collections;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace AutoMapper.Mappers
 {
-    public class ReadOnlyCollectionMapper : IObjectMapper
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using Configuration;
+
+    public class ReadOnlyCollectionMapper : IObjectMapExpression
     {
-        public object Map(ResolutionContext context, IMappingEngineRunner mapper)
+        public static ReadOnlyCollection<TDestinationItem> Map<TSource, TSourceItem, TDestinationItem>(TSource source, ResolutionContext context)
+            where TSource : IEnumerable
         {
-            Type genericType = typeof(EnumerableMapper<>);
+            if (source == null && context.Mapper.ShouldMapSourceCollectionAsNull(context))
+                return null;
 
-            var elementType = TypeHelper.GetElementType(context.DestinationType);
+            IList<TDestinationItem> list = new List<TDestinationItem>();
             
-            var enumerableMapper = genericType.MakeGenericType(elementType);
+            foreach (var item in (IEnumerable)source ?? Enumerable.Empty<object>())
+                list.Add((TDestinationItem)context.Mapper.Map(item, default(TDestinationItem), typeof(TSourceItem), typeof(TDestinationItem), context));
 
-            var objectMapper = (IObjectMapper)Activator.CreateInstance(enumerableMapper);
-
-            var nullDestinationValueSoTheReadOnlyCollectionMapperWorks =
-                context.PropertyMap != null
-                    ? context.CreateMemberContext(context.TypeMap, context.SourceValue, null, context.SourceType, context.PropertyMap)
-                    : context;
-
-            return objectMapper.Map(nullDestinationValueSoTheReadOnlyCollectionMapperWorks, mapper);
+            return new ReadOnlyCollection<TDestinationItem>(list);
         }
 
-        public bool IsMatch(ResolutionContext context)
+        private static readonly MethodInfo MapMethodInfo = typeof(ReadOnlyCollectionMapper).GetAllMethods().First(_ => _.IsStatic);
+
+        public object Map(ResolutionContext context)
         {
-			if(!(context.SourceType.IsEnumerableType() && context.DestinationType.IsGenericType))
-				return false;
-
-			  var genericType= context.DestinationType.GetGenericTypeDefinition();
-			  if (genericType == typeof(ReadOnlyCollection<>))
-				  return true;
-
-			  return false;
+            return
+                MapMethodInfo.MakeGenericMethod(context.SourceType, TypeHelper.GetElementType(context.SourceType), TypeHelper.GetElementType(context.DestinationType))
+                    .Invoke(null, new[] { context.SourceValue, context });
         }
 
-        #region Nested type: EnumerableMapper
-
-        private class EnumerableMapper<TElement> : EnumerableMapperBase<IList<TElement>>
+        public bool IsMatch(TypePair context)
         {
-            private readonly IList<TElement> inner = new List<TElement>();
-            
-            public override bool IsMatch(ResolutionContext context)
-            {
-                throw new NotImplementedException();
-            }
+            if (!(context.SourceType.IsEnumerableType() && context.DestinationType.IsGenericType()))
+                return false;
 
-            protected override void SetElementValue(IList<TElement> elements, object mappedValue, int index)
-            {
-                inner.Add((TElement)mappedValue);
-            }
+            var genericType = context.DestinationType.GetGenericTypeDefinition();
 
-            protected override IList<TElement> GetEnumerableFor(object destination)
-            {
-                return inner;
-            }
-
-            protected override IList<TElement> CreateDestinationObjectBase(Type destElementType, int sourceLength)
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override object CreateDestinationObject(ResolutionContext context, Type destinationElementType, int count, IMappingEngineRunner mapper)
-            {
-                return new ReadOnlyCollection<TElement>(inner);
-            }
+            return genericType == typeof (ReadOnlyCollection<>);
         }
 
-        #endregion
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        {
+            return Expression.Call(null, MapMethodInfo.MakeGenericMethod(sourceExpression.Type, TypeHelper.GetElementType(sourceExpression.Type), TypeHelper.GetElementType(destExpression.Type)), sourceExpression, contextExpression);
+        }
     }
 }

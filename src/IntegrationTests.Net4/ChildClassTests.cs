@@ -8,6 +8,7 @@ namespace AutoMapper.IntegrationTests.Net4
 {
     namespace ChildClassTests
     {
+        using AutoMapper.UnitTests;
         using QueryableExtensions;
 
         public class Base
@@ -42,12 +43,12 @@ namespace AutoMapper.IntegrationTests.Net4
             public string Sub1 { get; set; }
         }
 
-        public class Context : DbContext
+        public class TestContext : DbContext
         {
-            public Context()
+            public TestContext()
                 : base()
             {
-                Database.SetInitializer<Context>(new DatabaseInitializer());
+                Database.SetInitializer<TestContext>(new DatabaseInitializer());
             }
 
             public DbSet<Base> Bases { get; set; }
@@ -55,44 +56,37 @@ namespace AutoMapper.IntegrationTests.Net4
 
         }
 
-        public class DatabaseInitializer : CreateDatabaseIfNotExists<Context>
+        public class DatabaseInitializer : DropCreateDatabaseAlways<TestContext>
         {
-            protected override void Seed(Context context)
+            protected override void Seed(TestContext testContext)
             {
-                context.Bases.Add(new Base() { BaseID = 1, Base1 = "base1", Sub = new Sub() { BaseId = 1, Sub1 = "sub1" } });
+                testContext.Bases.Add(new Base() { BaseID = 1, Base1 = "base1", Sub = new Sub() { BaseId = 1, Sub1 = "sub1" } });
 
-                base.Seed(context);
+                base.Seed(testContext);
             }
         }
 
 
-        public class UnitTest
+        public class UnitTest : AutoMapperSpecBase
         {
-            public UnitTest()
+            protected override MapperConfiguration Configuration => new MapperConfiguration(cfg =>
             {
-                Mapper.Reset();
-            }
+                cfg.CreateMap<Base, BaseDTO>();
+                cfg.CreateMap<Sub, SubDTO>();
+            });
 
             [Fact]
-            public void EFConfiguredCorrectly()
+            public void AutoMapperEFRelationsTest()
             {
-                using (var context = new Context())
+                using (var context = new TestContext())
                 {
                     var baseEntitiy = context.Bases.FirstOrDefault();
                     baseEntitiy.ShouldNotBeNull();
                     baseEntitiy.BaseID.ShouldEqual(1);
                     baseEntitiy.Sub.Sub1.ShouldEqual("sub1");
                 }
-            }
 
-            [Fact]
-            public void AutoMapperEFRelationsTest()
-            {
-                Mapper.CreateMap<Base, BaseDTO>();
-                Mapper.CreateMap<Sub, SubDTO>();
-                Mapper.AssertConfigurationIsValid();
-
-                using (var context = new Context())
+                using (var context = new TestContext())
                 {
                     var baseDTO = context.Bases.Select(b => new BaseDTO
                     {
@@ -108,7 +102,7 @@ namespace AutoMapper.IntegrationTests.Net4
                     baseDTO.Sub.Sub1.ShouldEqual("sub1");
 
 
-                    baseDTO = context.Bases.Project().To<BaseDTO>().FirstOrDefault();
+                    baseDTO = context.Bases.ProjectTo<BaseDTO>(Configuration).FirstOrDefault();
                     baseDTO.ShouldNotBeNull();
                     baseDTO.BaseID.ShouldEqual(1);
                     baseDTO.Sub.Sub1.ShouldEqual("sub1");

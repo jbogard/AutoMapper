@@ -2,36 +2,36 @@ namespace AutoMapper.QueryableExtensions
 {
     using System;
     using System.Linq;
+    using System.Reflection;
 
     public class ExpressionRequest : IEquatable<ExpressionRequest>
     {
-        private readonly string _membersForComparison;
-        public Type SourceType { get; private set; }
-        public Type DestinationType { get; private set; }
-        public string[] IncludedMembers { get; private set; }
+        public Type SourceType { get; }
 
-        public ExpressionRequest(Type sourceType, Type destinationType, params string[] includedMembers)
+        public Type DestinationType { get; }
+
+        public MemberInfo[] MembersToExpand { get; }
+
+        public ExpressionRequest(Type sourceType, Type destinationType, params MemberInfo[] membersToExpand)
         {
             SourceType = sourceType;
             DestinationType = destinationType;
-            IncludedMembers = includedMembers;
-            _membersForComparison = includedMembers.Distinct()
-                .OrderBy(s => s)
-                .Aggregate(String.Empty, (prev, curr) => prev + curr);
+            MembersToExpand = membersToExpand.OrderBy(p=>p.Name).ToArray();
         }
 
         public bool Equals(ExpressionRequest other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return String.Equals(_membersForComparison, other._membersForComparison) && SourceType.Equals(other.SourceType) && DestinationType.Equals(other.DestinationType);
+            return MembersToExpand.SequenceEqual(other.MembersToExpand) &&
+                   SourceType == other.SourceType && DestinationType == other.DestinationType;
         }
 
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((ExpressionRequest) obj);
         }
 
@@ -39,10 +39,9 @@ namespace AutoMapper.QueryableExtensions
         {
             unchecked
             {
-                var hashCode = _membersForComparison.GetHashCode();
-                hashCode = (hashCode*397) ^ SourceType.GetHashCode();
+                var hashCode = SourceType.GetHashCode();
                 hashCode = (hashCode*397) ^ DestinationType.GetHashCode();
-                return hashCode;
+                return MembersToExpand.Aggregate(hashCode, (currentHash, p) => (currentHash * 397) ^ p.GetHashCode());
             }
         }
 

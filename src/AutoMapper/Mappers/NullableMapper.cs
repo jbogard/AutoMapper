@@ -1,30 +1,24 @@
-using AutoMapper.Internal;
+using System.Linq.Expressions;
 
 namespace AutoMapper.Mappers
 {
-	public class NullableMapper : IObjectMapper
-	{
-		public object Map(ResolutionContext context, IMappingEngineRunner mapper)
-		{
-			return context.SourceValue;
-		}
+    using Configuration;
 
-		public bool IsMatch(ResolutionContext context)
-		{
-			return context.DestinationType.IsNullableType();
-		}
-	}
+    public class NullableMapper : IObjectMapExpression
+    {
+        public object Map(ResolutionContext context)
+        {
+            return context.SourceValue;
+        }
 
-	public class NullableSourceMapper : IObjectMapper
-	{
-		public object Map(ResolutionContext context, IMappingEngineRunner mapper)
-		{
-			return context.SourceValue ?? mapper.CreateObject(context);
-		}
+        public bool IsMatch(TypePair context)
+        {
+            return context.DestinationType.IsNullableType();
+        }
 
-		public bool IsMatch(ResolutionContext context)
-		{
-			return context.SourceType.IsNullableType() && ! context.DestinationType.IsNullableType();
-		}
-	}
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        {
+            return sourceExpression;
+        }
+    }
 }

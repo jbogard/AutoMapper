@@ -1,7 +1,8 @@
+using System.Collections.Concurrent;
+
 namespace AutoMapper.QueryableExtensions.Impl
 {
     using System.Linq.Expressions;
-    using Internal;
 
     public class StringExpressionBinder : IExpressionBinder
     {
@@ -10,7 +11,7 @@ namespace AutoMapper.QueryableExtensions.Impl
             return propertyMap.DestinationPropertyType == typeof(string);
         }
 
-        public MemberAssignment Build(IMappingEngine mappingEngine, PropertyMap propertyMap, TypeMap propertyTypeMap, ExpressionRequest request, ExpressionResolutionResult result, IDictionary<ExpressionRequest, int> typePairCount)
+        public MemberAssignment Build(IConfigurationProvider configuration, PropertyMap propertyMap, TypeMap propertyTypeMap, ExpressionRequest request, ExpressionResolutionResult result, ConcurrentDictionary<ExpressionRequest, int> typePairCount)
         {
             return BindStringExpression(propertyMap, result);
         }

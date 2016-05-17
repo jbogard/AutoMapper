@@ -1,140 +1,72 @@
-﻿using System.Linq;
-using AutoMapper.Internal;
+﻿using System.Linq.Expressions;
 
 namespace AutoMapper.Mappers
 {
     using System;
-    using System.Collections.Generic;
     using System.Reflection;
+    using System.Collections.Generic;
+    using System.Linq;
+    using Configuration;
 
-    public class HashSetMapper : IObjectMapper
+    public class HashSetMapper : IObjectMapExpression
     {
-        public object Map(ResolutionContext context, IMappingEngineRunner mapper)
+        public static ISet<TDestination> Map<TSource, TDestination>(IEnumerable<TSource> source, ISet<TDestination> destination, ResolutionContext context)
         {
-            Type genericType = typeof(EnumerableMapper<,>);
+            if (source == null && context.Mapper.ShouldMapSourceCollectionAsNull(context))
+            {
+                return null;
+            }
 
-            var collectionType = context.DestinationType;
-            var elementType = TypeHelper.GetElementType(context.DestinationType);
+            destination = destination ?? new HashSet<TDestination>();
 
-            var enumerableMapper = genericType.MakeGenericType(collectionType, elementType);
+            destination.Clear();
 
-            var objectMapper = (IObjectMapper)Activator.CreateInstance(enumerableMapper);
+            foreach (var item in source ?? Enumerable.Empty<TSource>())
+            {
+                destination.Add(context.Mapper.Map(item, default(TDestination), context));
+            }
 
-            return objectMapper.Map(context, mapper);
+            return destination;
         }
 
-        public bool IsMatch(ResolutionContext context)
+        private static readonly MethodInfo MapMethodInfo = typeof(HashSetMapper).GetAllMethods().First(_ => _.IsStatic);
+
+        public object Map(ResolutionContext context)
+        {
+            var srcType = TypeHelper.GetElementType(context.SourceType);
+            var destType = TypeHelper.GetElementType(context.DestinationType);
+
+            return MapMethodInfo.MakeGenericMethod(srcType, destType).Invoke(null, new [] { context.SourceValue, context.DestinationValue, context });
+        }
+
+        public bool IsMatch(TypePair context)
         {
             var isMatch = context.SourceType.IsEnumerableType() && IsSetType(context.DestinationType);
 
             return isMatch;
         }
 
-#if !NETFX_CORE
+
+        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        {
+            return Expression.Call(null,
+                MapMethodInfo.MakeGenericMethod(TypeHelper.GetElementType(sourceExpression.Type), TypeHelper.GetElementType(destExpression.Type)),
+                    sourceExpression, destExpression, contextExpression);
+        }
+
         private static bool IsSetType(Type type)
         {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ISet<>))
+            if (type.IsGenericType() && type.GetGenericTypeDefinition() == typeof (ISet<>))
             {
                 return true;
             }
 
-            IEnumerable<Type> genericInterfaces = type.GetInterfaces().Where(t => t.IsGenericType);
+            IEnumerable<Type> genericInterfaces = type.GetTypeInfo().ImplementedInterfaces.Where(t => t.IsGenericType());
             IEnumerable<Type> baseDefinitions = genericInterfaces.Select(t => t.GetGenericTypeDefinition());
 
-            var isCollectionType = baseDefinitions.Any(t => t == typeof(ISet<>));
+            var isCollectionType = baseDefinitions.Any(t => t == typeof (ISet<>));
 
             return isCollectionType;
         }
-
-
-        private class EnumerableMapper<TCollection, TElement> : EnumerableMapperBase<TCollection>
-            where TCollection : ISet<TElement>
-        {
-            public override bool IsMatch(ResolutionContext context)
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void SetElementValue(TCollection destination, object mappedValue, int index)
-            {
-                destination.Add((TElement)mappedValue);
-            }
-
-            protected override void ClearEnumerable(TCollection enumerable)
-            {
-                enumerable.Clear();
-            }
-
-            protected override TCollection CreateDestinationObjectBase(Type destElementType, int sourceLength)
-            {
-                Object collection;
-
-                if (typeof(TCollection).IsInterface)
-                {
-                    collection = new HashSet<TElement>();
-                }
-                else
-                {
-                    collection = ObjectCreator.CreateDefaultValue(typeof(TCollection));
-                }
-
-                return (TCollection)collection;
-            }
-        }
-
-#else
-
-        private static bool IsSetType(Type type)
-        {
-            if (type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == typeof(ISet<>))
-            {
-                return true;
-            }
-
-            IEnumerable<Type> genericInterfaces = type.GetTypeInfo().ImplementedInterfaces.Where(t => t.GetTypeInfo().IsGenericType);
-            IEnumerable<Type> baseDefinitions = genericInterfaces.Select(t => t.GetGenericTypeDefinition());
-
-            var isCollectionType = baseDefinitions.Any(t => t == typeof(ISet<>));
-
-            return isCollectionType;
-        }
-
-
-        private class EnumerableMapper<TCollection, TElement> : EnumerableMapperBase<TCollection>
-            where TCollection : ISet<TElement>
-        {
-            public override bool IsMatch(ResolutionContext context)
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void SetElementValue(TCollection destination, object mappedValue, int index)
-            {
-                destination.Add((TElement)mappedValue);
-            }
-
-            protected override void ClearEnumerable(TCollection enumerable)
-            {
-                enumerable.Clear();
-            }
-
-            protected override TCollection CreateDestinationObjectBase(Type destElementType, int sourceLength)
-            {
-                Object collection;
-
-                if (typeof(TCollection).GetTypeInfo().IsInterface)
-                {
-                    collection = new HashSet<TElement>();
-                }
-                else
-                {
-                    collection = ObjectCreator.CreateDefaultValue(typeof(TCollection));
-                }
-
-                return (TCollection)collection;
-            }
-        }
-
-#endif
     }
 }

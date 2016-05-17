@@ -9,20 +9,17 @@ namespace AutoMapper.UnitTests.Bug
 		private Entity testEntity;
 		private EditModel testModel;
 
-        protected override void Establish_context()
+        protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
         {
-            Mapper.Initialize(cfg =>
-            {
-                cfg.CreateMap<Entity, BaseModel>()
-                    .ForMember(model => model.Value1, mce => mce.MapFrom(entity => entity.Value2))
-                    .ForMember(model => model.Value2, mce => mce.MapFrom(entity => entity.Value1))
-                    .Include<Entity, EditModel>()
-                    .Include<Entity, ViewModel>();
-                cfg.CreateMap<Entity, EditModel>()
-                    .ForMember(model => model.Value3, mce => mce.MapFrom(entity => entity.Value1 + entity.Value2));
-                cfg.CreateMap<Entity, ViewModel>();
-            });
-        }
+            cfg.CreateMap<Entity, ViewModel>();
+            cfg.CreateMap<Entity, BaseModel>()
+                .ForMember(model => model.Value1, mce => mce.MapFrom(entity => entity.Value2))
+                .ForMember(model => model.Value2, mce => mce.MapFrom(entity => entity.Value1))
+                .Include<Entity, EditModel>()
+                .Include<Entity, ViewModel>();
+            cfg.CreateMap<Entity, EditModel>()
+                .ForMember(model => model.Value3, mce => mce.MapFrom(entity => entity.Value1 + entity.Value2));
+        });
 
         protected override void Because_of()
         {
@@ -62,4 +59,44 @@ namespace AutoMapper.UnitTests.Bug
         public class ViewModel : BaseModel { }
     }
 
+    public class MappingInheritanceBug
+    {
+        [Fact]
+        public void TestMethod1()
+        {
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Order, OrderDto>()
+                    .Include<OnlineOrder, OnlineOrderDto>()
+                    .Include<MailOrder, MailOrderDto>();
+                cfg.CreateMap<OnlineOrder, OnlineOrderDto>();
+                cfg.CreateMap<MailOrder, MailOrderDto>();
+            });
+
+            var mapper = config.CreateMapper();
+
+            var mailOrder = new MailOrder() { NewId = 1 };
+            var mapped = mapper.Map<OrderDto>(mailOrder);
+
+            mapped.ShouldBeType<MailOrderDto>();
+        }
+
+        public abstract class Base<T>
+        {
+        }
+
+        public class Order : Base<Order> { }
+        public class OnlineOrder : Order { }
+        public class MailOrder : Order
+        {
+            public int NewId { get; set; }
+        }
+
+        public class OrderDto { }
+        public class OnlineOrderDto : OrderDto { }
+        public class MailOrderDto : OrderDto
+        {
+            public int NewId { get; set; }
+        }
+    }
 }

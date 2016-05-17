@@ -1,5 +1,10 @@
-<img src="https://s3.amazonaws.com/automapper/logo.png" alt="AutoMapper">
+<img src="https://s3.amazonaws.com/automapper/logo.png" alt="AutoMapper"> 
 ================================
+
+[![Build status](https://ci.appveyor.com/api/projects/status/q261l3sbokafmx1o/branch/develop?svg=true)](https://ci.appveyor.com/project/jbogard/automapper/branch/develop)
+[![NuGet](https://img.shields.io/nuget/dt/AutoMapper.svg)](https://www.nuget.org/packages/AutoMapper/)
+[![NuGet](http://img.shields.io/nuget/v/AutoMapper.svg)](https://www.nuget.org/packages/AutoMapper/)
+[![MyGet CI](https://img.shields.io/myget/automapperdev/v/AutoMapper.svg)](http://myget.org/gallery/automapperdev)
 
 What is AutoMapper?
 --------------------------------
@@ -11,7 +16,7 @@ Check out the [getting started guide](https://github.com/AutoMapper/AutoMapper/w
 
 Where can I get it?
 --------------------------------
-First, [install NuGet](http://docs.nuget.org/docs/start-here/installing-nuget). Then, install AutoMapper from the package manager console:
+First, [install NuGet](http://docs.nuget.org/docs/start-here/installing-nuget). Then, install [AutoMapper](https://www.nuget.org/packages/AutoMapper/) from the package manager console:
 
     PM> Install-Package AutoMapper
 

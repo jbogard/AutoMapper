@@ -1,15 +1,103 @@
-using System;
-using System.Linq.Expressions;
-
 namespace AutoMapper
 {
+    using System;
     using System.ComponentModel;
+    using System.Linq.Expressions;
 
     /// <summary>
     /// Mapping configuration options for non-generic maps
     /// </summary>
     public interface IMappingExpression
     {
+        /// <summary>
+        /// Preserve object identity. Useful for circular references.
+        /// </summary>
+        /// <returns></returns>
+        IMappingExpression PreserveReferences();
+
+        /// <summary>
+        /// Customize configuration for individual constructor parameter
+        /// </summary>
+        /// <param name="ctorParamName">Constructor parameter name</param>
+        /// <param name="paramOptions">Options</param>
+        /// <returns>Itself</returns>
+        IMappingExpression ForCtorParam(string ctorParamName, Action<ICtorParamConfigurationExpression<object>> paramOptions);
+
+        /// <summary>
+        /// Create a type mapping from the destination to the source type, using the destination members as validation.
+        /// </summary>
+        /// <returns>Itself</returns>
+        IMappingExpression ReverseMap();
+
+        /// <summary>
+        /// Replace the original runtime instance with a new source instance. Useful when ORMs return proxy types with no relationships to runtime types.
+        /// The returned source object will be mapped instead of what was supplied in the original source object.
+        /// </summary>
+        /// <param name="substituteFunc">Substitution function</param>
+        /// <returns>New source object to map.</returns>
+        IMappingExpression Substitute(Func<object, object> substituteFunc);
+        
+        /// <summary>
+        /// Construct the destination object using the service locator
+        /// </summary>
+        /// <returns>Itself</returns>
+        IMappingExpression ConstructUsingServiceLocator();
+
+        /// <summary>
+        /// For self-referential types, limit recurse depth.
+        /// Enables PreserveReferences.
+        /// </summary>
+        /// <param name="depth">Number of levels to limit to</param>
+        /// <returns>Itself</returns>
+        IMappingExpression MaxDepth(int depth);
+        
+        /// <summary>
+        /// Supply a custom instantiation expression for the destination type for LINQ projection
+        /// </summary>
+        /// <param name="ctor">Callback to create the destination type given the source object</param>
+        /// <returns>Itself</returns>
+        IMappingExpression ConstructProjectionUsing(LambdaExpression ctor);
+
+        /// <summary>
+        /// Supply a custom instantiation function for the destination type, based on the entire resolution context
+        /// </summary>
+        /// <param name="ctor">Callback to create the destination type given the source object and current resolution context</param>
+        /// <returns>Itself</returns>
+        IMappingExpression ConstructUsing(Func<object, ResolutionContext, object> ctor);
+
+        /// <summary>
+        /// Supply a custom instantiation function for the destination type
+        /// </summary>
+        /// <param name="ctor">Callback to create the destination type given the source object</param>
+        /// <returns>Itself</returns>
+        IMappingExpression ConstructUsing(Func<object, object> ctor);
+
+        /// <summary>
+        /// Skip member mapping and use a custom expression during LINQ projection
+        /// </summary>
+        /// <param name="projectionExpression">Projection expression</param>
+        void ProjectUsing(Expression<Func<object, object>> projectionExpression);
+
+        /// <summary>
+        /// Customize configuration for all members
+        /// </summary>
+        /// <param name="memberOptions">Callback for member options</param>
+        void ForAllMembers(Action<IMemberConfigurationExpression> memberOptions);
+
+        /// <summary>
+        /// Customize configuration for members not previously configured
+        /// </summary>
+        /// <param name="memberOptions">Callback for member options</param>
+        void ForAllOtherMembers(Action<IMemberConfigurationExpression> memberOptions);
+
+        /// <summary>
+        /// Customize configuration for an individual source member
+        /// </summary>
+        /// <param name="sourceMemberName">Source member name</param>
+        /// <param name="memberOptions">Callback for member configuration options</param>
+        /// <returns>Itself</returns>
+        IMappingExpression ForSourceMember(string sourceMemberName, Action<ISourceMemberConfigurationExpression> memberOptions);
+        
         /// <summary>
         /// Skip normal member mapping and convert using a <see cref="ITypeConverter{TSource,TDestination}"/> instantiated during mapping
         /// </summary>
@@ -22,19 +110,12 @@ namespace AutoMapper
         /// </summary>
         /// <param name="typeConverterType">Type converter type</param>
         void ConvertUsing(Type typeConverterType);
-
+        
         /// <summary>
         /// Override the destination type mapping for looking up configuration and instantiation
         /// </summary>
         /// <param name="typeOverride"></param>
         void As(Type typeOverride);
-
-        /// <summary>
-        /// Assign a profile to the current type map
-        /// </summary>
-        /// <param name="profileName">Profile name</param>
-        /// <returns>Itself</returns>
-        IMappingExpression WithProfile(string profileName);
 
         /// <summary>
         /// Customize individual members
@@ -45,12 +126,62 @@ namespace AutoMapper
         IMappingExpression ForMember(string name, Action<IMemberConfigurationExpression> memberOptions);
 
         /// <summary>
-        /// Customize configuration for an individual source member
+        /// Include this configuration in derived types' maps
         /// </summary>
-        /// <param name="sourceMemberName">Source member name</param>
-        /// <param name="memberOptions">Callback for member configuration options</param>
+        /// <param name="derivedSourceType">Derived source type</param>
+        /// <param name="derivedDestinationType">Derived destination type</param>
         /// <returns>Itself</returns>
-        IMappingExpression ForSourceMember(string sourceMemberName, Action<ISourceMemberConfigurationExpression> memberOptions);
+        IMappingExpression Include(Type derivedSourceType, Type derivedDestinationType);
+
+        /// <summary>
+        /// Ignores all destination properties that have either a private or protected setter, forcing the mapper to respect encapsulation (note: order matters, so place this before explicit configuration of any properties with an inaccessible setter)
+        /// </summary>
+        /// <returns>Itself</returns>
+        IMappingExpression IgnoreAllPropertiesWithAnInaccessibleSetter();
+
+        /// <summary>
+        /// When using ReverseMap, ignores all source properties that have either a private or protected setter, keeping the reverse mapping consistent with the forward mapping (note: destination properties with an inaccessible setter may still be mapped unless IgnoreAllPropertiesWithAnInaccessibleSetter is also used)
+        /// </summary>
+        /// <returns>Itself</returns>
+        IMappingExpression IgnoreAllSourcePropertiesWithAnInaccessibleSetter();
+
+        /// <summary>
+        /// Include the base type map's configuration in this map
+        /// </summary>
+        /// <param name="sourceBase">Base source type</param>
+        /// <param name="destinationBase">Base destination type</param>
+        /// <returns></returns>
+        IMappingExpression IncludeBase(Type sourceBase, Type destinationBase);
+
+        /// <summary>
+        /// Execute a custom function to the source and/or destination types before member mapping
+        /// </summary>
+        /// <param name="beforeFunction">Callback for the source/destination types</param>
+        /// <returns>Itself</returns>
+        IMappingExpression BeforeMap(Action<object, object> beforeFunction);
+
+        /// <summary>
+        /// Execute a custom mapping action before member mapping
+        /// </summary>
+        /// <typeparam name="TMappingAction">Mapping action type instantiated during mapping</typeparam>
+        /// <returns>Itself</returns>
+        IMappingExpression BeforeMap<TMappingAction>()
+            where TMappingAction : IMappingAction<object, object>;
+
+        /// <summary>
+        /// Execute a custom function to the source and/or destination types after member mapping
+        /// </summary>
+        /// <param name="afterFunction">Callback for the source/destination types</param>
+        /// <returns>Itself</returns>
+        IMappingExpression AfterMap(Action<object, object> afterFunction);
+
+        /// <summary>
+        /// Execute a custom mapping action after member mapping
+        /// </summary>
+        /// <typeparam name="TMappingAction">Mapping action type instantiated during mapping</typeparam>
+        /// <returns>Itself</returns>
+        IMappingExpression AfterMap<TMappingAction>()
+            where TMappingAction : IMappingAction<object, object>;
     }
 
     /// <summary>
@@ -61,12 +192,25 @@ namespace AutoMapper
     public interface IMappingExpression<TSource, TDestination>
     {
         /// <summary>
+        /// Preserve object identity. Useful for circular references.
+        /// </summary>
+        /// <returns></returns>
+        IMappingExpression<TSource, TDestination> PreserveReferences();
+
+        /// <summary>
+        /// Customize configuration for members not previously configured
+        /// </summary>
+        /// <param name="memberOptions">Callback for member options</param>
+        void ForAllOtherMembers(Action<IMemberConfigurationExpression<TSource, TDestination, object>> memberOptions);
+
+        /// <summary>
         /// Customize configuration for individual member
         /// </summary>
         /// <param name="destinationMember">Expression to the top-level destination member. This must be a member on the <typeparamref name="TDestination"/>TDestination</param> type
         /// <param name="memberOptions">Callback for member options</param>
         /// <returns>Itself</returns>
-        IMappingExpression<TSource, TDestination> ForMember(Expression<Func<TDestination, object>> destinationMember, Action<IMemberConfigurationExpression<TSource>> memberOptions);
+        IMappingExpression<TSource, TDestination> ForMember<TMember>(Expression<Func<TDestination, TMember>> destinationMember,
+            Action<IMemberConfigurationExpression<TSource, TDestination, TMember>> memberOptions);
 
         /// <summary>
         /// Customize configuration for individual member. Used when the name isn't known at compile-time
@@ -74,13 +218,14 @@ namespace AutoMapper
         /// <param name="name">Destination member name</param>
         /// <param name="memberOptions">Callback for member options</param>
         /// <returns></returns>
-        IMappingExpression<TSource, TDestination> ForMember(string name, Action<IMemberConfigurationExpression<TSource>> memberOptions);
+        IMappingExpression<TSource, TDestination> ForMember(string name,
+            Action<IMemberConfigurationExpression<TSource, TDestination, object>> memberOptions);
 
         /// <summary>
         /// Customize configuration for all members
         /// </summary>
         /// <param name="memberOptions">Callback for member options</param>
-        void ForAllMembers(Action<IMemberConfigurationExpression<TSource>> memberOptions);
+        void ForAllMembers(Action<IMemberConfigurationExpression<TSource, TDestination, object>> memberOptions);
 
         /// <summary>
         /// Ignores all <typeparamref name="TDestination"/> properties that have either a private or protected setter, forcing the mapper to respect encapsulation (note: order matters, so place this before explicit configuration of any properties with an inaccessible setter)
@@ -121,13 +266,6 @@ namespace AutoMapper
         IMappingExpression<TSource, TDestination> Include(Type derivedSourceType, Type derivedDestinationType);
 
         /// <summary>
-        /// Assign a profile to the current type map
-        /// </summary>
-        /// <param name="profileName">Name of the profile</param>
-        /// <returns>Itself</returns>
-        IMappingExpression<TSource, TDestination> WithProfile(string profileName);
-
-        /// <summary>
         /// Skip member mapping and use a custom expression during LINQ projection
         /// </summary>
         /// <param name="projectionExpression">Projection expression</param>
@@ -138,6 +276,12 @@ namespace AutoMapper
         /// </summary>
         /// <param name="mappingFunction">Callback to convert from source type to destination type</param>
         void ConvertUsing(Func<TSource, TDestination> mappingFunction);
+
+        /// <summary>
+        /// Skip member mapping and use a custom function to convert to the destination type
+        /// </summary>
+        /// <param name="mappingFunction">Callback to convert from source type to destination type</param>
+        void ConvertUsing(Func<TSource, ResolutionContext, TDestination> mappingFunction);
 
         /// <summary>
         /// Skip member mapping and use a custom type converter instance to convert to the destination type
@@ -159,11 +303,19 @@ namespace AutoMapper
         IMappingExpression<TSource, TDestination> BeforeMap(Action<TSource, TDestination> beforeFunction);
 
         /// <summary>
+        /// Execute a custom function to the source and/or destination types before member mapping
+        /// </summary>
+        /// <param name="beforeFunction">Callback for the source/destination types</param>
+        /// <returns>Itself</returns>
+        IMappingExpression<TSource, TDestination> BeforeMap(Action<TSource, TDestination, ResolutionContext> beforeFunction);
+
+        /// <summary>
         /// Execute a custom mapping action before member mapping
         /// </summary>
         /// <typeparam name="TMappingAction">Mapping action type instantiated during mapping</typeparam>
         /// <returns>Itself</returns>
-        IMappingExpression<TSource, TDestination> BeforeMap<TMappingAction>() where TMappingAction : IMappingAction<TSource, TDestination>;
+        IMappingExpression<TSource, TDestination> BeforeMap<TMappingAction>()
+            where TMappingAction : IMappingAction<TSource, TDestination>;
 
         /// <summary>
         /// Execute a custom function to the source and/or destination types after member mapping
@@ -173,11 +325,19 @@ namespace AutoMapper
         IMappingExpression<TSource, TDestination> AfterMap(Action<TSource, TDestination> afterFunction);
 
         /// <summary>
+        /// Execute a custom function to the source and/or destination types after member mapping
+        /// </summary>
+        /// <param name="afterFunction">Callback for the source/destination types</param>
+        /// <returns>Itself</returns>
+        IMappingExpression<TSource, TDestination> AfterMap(Action<TSource, TDestination, ResolutionContext> afterFunction);
+
+        /// <summary>
         /// Execute a custom mapping action after member mapping
         /// </summary>
         /// <typeparam name="TMappingAction">Mapping action type instantiated during mapping</typeparam>
         /// <returns>Itself</returns>
-        IMappingExpression<TSource, TDestination> AfterMap<TMappingAction>() where TMappingAction : IMappingAction<TSource, TDestination>;
+        IMappingExpression<TSource, TDestination> AfterMap<TMappingAction>()
+            where TMappingAction : IMappingAction<TSource, TDestination>;
 
         /// <summary>
         /// Supply a custom instantiation function for the destination type
@@ -198,7 +358,7 @@ namespace AutoMapper
         /// </summary>
         /// <param name="ctor">Callback to create the destination type given the current resolution context</param>
         /// <returns>Itself</returns>
-        IMappingExpression<TSource, TDestination> ConstructUsing(Func<ResolutionContext, TDestination> ctor);
+        IMappingExpression<TSource, TDestination> ConstructUsing(Func<TSource, ResolutionContext, TDestination> ctor);
 
         /// <summary>
         /// Override the destination type mapping for looking up configuration and instantiation
@@ -207,7 +367,8 @@ namespace AutoMapper
         void As<T>();
 
         /// <summary>
-        /// For self-referential types, limit recurse depth
+        /// For self-referential types, limit recurse depth.
+        /// Enables PreserveReferences.
         /// </summary>
         /// <param name="depth">Number of levels to limit to</param>
         /// <returns>Itself</returns>
@@ -231,7 +392,8 @@ namespace AutoMapper
         /// <param name="sourceMember">Expression to source member. Must be a member of the <typeparamref name="TSource"/> type</param>
         /// <param name="memberOptions">Callback for member configuration options</param>
         /// <returns>Itself</returns>
-        IMappingExpression<TSource, TDestination> ForSourceMember(Expression<Func<TSource, object>> sourceMember, Action<ISourceMemberConfigurationExpression<TSource>> memberOptions);
+        IMappingExpression<TSource, TDestination> ForSourceMember(Expression<Func<TSource, object>> sourceMember,
+            Action<ISourceMemberConfigurationExpression> memberOptions);
 
         /// <summary>
         /// Customize configuration for an individual source member. Member name not known until runtime
@@ -239,7 +401,8 @@ namespace AutoMapper
         /// <param name="sourceMemberName">Expression to source member. Must be a member of the <typeparamref name="TSource"/> type</param>
         /// <param name="memberOptions">Callback for member configuration options</param>
         /// <returns>Itself</returns>
-        IMappingExpression<TSource, TDestination> ForSourceMember(string sourceMemberName, Action<ISourceMemberConfigurationExpression<TSource>> memberOptions);
+        IMappingExpression<TSource, TDestination> ForSourceMember(string sourceMemberName,
+            Action<ISourceMemberConfigurationExpression> memberOptions);
 
         /// <summary>
         /// Replace the original runtime instance with a new source instance. Useful when ORMs return proxy types with no relationships to runtime types.
@@ -247,286 +410,14 @@ namespace AutoMapper
         /// </summary>
         /// <param name="substituteFunc">Substitution function</param>
         /// <returns>New source object to map.</returns>
-        IMappingExpression<TSource, TDestination> Substitute(Func<TSource, object> substituteFunc);
+        IMappingExpression<TSource, TDestination> Substitute<TSubstitute>(Func<TSource, TSubstitute> substituteFunc);
 
         /// <summary>
-        /// The current TypeMap being configured
+        /// Customize configuration for individual constructor parameter
         /// </summary>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        TypeMap TypeMap { get; }
-    }
-
-    /// <summary>
-    /// Configuration options for an individual member
-    /// </summary>
-    public interface IMemberConfigurationExpression
-    {
-        /// <summary>
-        /// Map from a specific source member
-        /// </summary>
-        /// <param name="sourceMember">Source member to map from</param>
-        void MapFrom(string sourceMember);
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver instance
-        /// </summary>
-        /// <param name="valueResolver">Value resolver to use</param>
-        /// <returns>Value resolver configuration options</returns>
-        IResolutionExpression ResolveUsing(IValueResolver valueResolver);
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver
-        /// </summary>
-        /// <param name="valueResolverType">Value resolver of type <see cref="IValueResolver"/></param>
-        /// <returns>Value resolver configuration options</returns>
-        IResolverConfigurationExpression ResolveUsing(Type valueResolverType);
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver
-        /// </summary>
-        /// <typeparam name="TValueResolver">Value resolver of type <see cref="IValueResolver"/></typeparam>
-        /// <returns>Value resolver configuration options</returns>
-        IResolverConfigurationExpression ResolveUsing<TValueResolver>();
-
-        /// <summary>
-        /// Ignore this member for configuration validation and skip during mapping
-        /// </summary>
-        void Ignore();
-
-        /// <summary>
-        /// Use the destination value instead of mapping from the source value or creating a new instance
-        /// </summary>
-        void UseDestinationValue();
-    }
-
-    /// <summary>
-    /// Source member configuration options
-    /// </summary>
-    public interface ISourceMemberConfigurationExpression
-    {
-        /// <summary>
-        /// Ignore this member for configuration validation and skip during mapping
-        /// </summary>
-        void Ignore();
-    }
-
-    /// <summary>
-    /// Source member configuration options
-    /// </summary>
-    /// <typeparam name="TSource">Source type</typeparam>
-    public interface ISourceMemberConfigurationExpression<TSource> : ISourceMemberConfigurationExpression
-    {
-    }
-
-    /// <summary>
-    /// Member configuration options
-    /// </summary>
-    /// <typeparam name="TSource">Source type for this member</typeparam>
-    public interface IMemberConfigurationExpression<TSource>
-    {
-        [Obsolete("Formatters should not be used.")]
-        void SkipFormatter<TValueFormatter>() where TValueFormatter : IValueFormatter;
-        [Obsolete("Formatters should not be used.")]
-        IFormatterCtorExpression<TValueFormatter> AddFormatter<TValueFormatter>() where TValueFormatter : IValueFormatter;
-        [Obsolete("Formatters should not be used.")]
-        IFormatterCtorExpression AddFormatter(Type valueFormatterType);
-        [Obsolete("Formatters should not be used.")]
-        void AddFormatter(IValueFormatter formatter);
-
-        /// <summary>
-        /// Substitute a custom value when the source member resolves as null
-        /// </summary>
-        /// <param name="nullSubstitute">Value to use</param>
-        void NullSubstitute(object nullSubstitute);
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver
-        /// </summary>
-        /// <typeparam name="TValueResolver">Value resolver type</typeparam>
-        /// <returns>Value resolver configuration options</returns>
-        IResolverConfigurationExpression<TSource, TValueResolver> ResolveUsing<TValueResolver>() where TValueResolver : IValueResolver;
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver. Used when the value resolver is not known at compile-time
-        /// </summary>
-        /// <param name="valueResolverType">Value resolver type</param>
-        /// <returns>Value resolver configuration options</returns>
-        IResolverConfigurationExpression<TSource> ResolveUsing(Type valueResolverType);
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver instance
-        /// </summary>
-        /// <param name="valueResolver">Value resolver instance to use</param>
-        /// <returns>Resolution expression</returns>
-        IResolutionExpression<TSource> ResolveUsing(IValueResolver valueResolver);
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver callback. Used instead of MapFrom when not simply redirecting a source member
-        /// This method cannot be used in conjunction with LINQ query projection
-        /// </summary>
-        /// <param name="resolver">Callback function to resolve against source type</param>
-        void ResolveUsing(Func<TSource, object> resolver);
-
-        /// <summary>
-        /// Resolve destination member using a custom value resolver callback. Used instead of MapFrom when not simply redirecting a source member
-        /// Access both the source object and current resolution context for additional mapping, context items and parent objects
-        /// This method cannot be used in conjunction with LINQ query projection
-        /// </summary>
-        /// <param name="resolver">Callback function to resolve against source type</param>
-        void ResolveUsing(Func<ResolutionResult, object> resolver);
-
-        /// <summary>
-        /// Specify the source member to map from. Can only reference a member on the <typeparamref name="TSource"/> type
-        /// This method can be used in mapping to LINQ query projections, while ResolveUsing cannot.
-        /// Any null reference exceptions in this expression will be ignored (similar to flattening behavior)
-        /// </summary>
-        /// <typeparam name="TMember">Member type of the source member to use</typeparam>
-        /// <param name="sourceMember">Expression referencing the source member to map against</param>
-        void MapFrom<TMember>(Expression<Func<TSource, TMember>> sourceMember);
-
-        /// <summary>
-        /// Ignore this member for configuration validation and skip during mapping
-        /// </summary>
-        void Ignore();
-
-        /// <summary>
-        /// Supply a custom mapping order instead of what the .NET runtime returns
-        /// </summary>
-        /// <param name="mappingOrder">Mapping order value</param>
-        void SetMappingOrder(int mappingOrder);
-
-        /// <summary>
-        /// Use the destination value instead of mapping from the source value or creating a new instance
-        /// </summary>
-        void UseDestinationValue();
-
-        /// <summary>
-        /// Do not use the destination value instead of mapping from the source value or creating a new instance
-        /// </summary>        
-        void DoNotUseDestinationValue();
-        
-        /// <summary>
-        /// Use a custom value
-        /// </summary>
-        /// <typeparam name="TValue">Value type</typeparam>
-        /// <param name="value">Value to use</param>
-		 void UseValue<TValue>(TValue value);
-
-        /// <summary>
-        /// Use a custom value
-        /// </summary>
-        /// <param name="value">Value to use</param>
-        void UseValue(object value);
-
-        /// <summary>
-        /// Conditionally map this member
-        /// </summary>
-        /// <param name="condition">Condition to evaluate using the source object</param>
-        void Condition(Func<TSource, bool> condition);
-
-        /// <summary>
-        /// Conditionally map this member
-        /// </summary>
-        /// <param name="condition">Condition to evaluate using the current resolution context</param>
-        void Condition(Func<ResolutionContext, bool> condition);
-       
-        /// <summary>
-        /// Conditionally map this member, evaluated before accessing the source value
-        /// </summary>
-        /// <param name="condition">Condition to evaluate using the source object</param>
-        void PreCondition(Func<TSource, bool> condition);
-
-        /// <summary>
-        /// Conditionally map this member, evaluated before accessing the source value
-        /// </summary>
-        /// <param name="condition">Condition to evaluate using the current resolution context</param>
-        void PreCondition(Func<ResolutionContext, bool> condition);
-
-        /// <summary>
-        /// Ignore this member for LINQ projections unless explicitly expanded during projection
-        /// </summary>
-        void ExplicitExpansion();
-    }
-
-    /// <summary>
-    /// Custom resolver options
-    /// </summary>
-    public interface IResolutionExpression
-    {
-        /// <summary>
-        /// Use the supplied member as the input to the resolver instead of the root source object
-        /// </summary>
-        /// <param name="sourcePropertyName">Property name to use</param>
-        void FromMember(string sourcePropertyName);
-    }
-
-    /// <summary>
-    /// Custom resolver options
-    /// </summary>
-    public interface IResolverConfigurationExpression : IResolutionExpression
-    {
-        /// <summary>
-        /// Construct the value resolver using supplied constructor function
-        /// </summary>
-        /// <param name="constructor">Value resolver constructor function</param>
+        /// <param name="ctorParamName">Constructor parameter name</param>
+        /// <param name="paramOptions">Options</param>
         /// <returns>Itself</returns>
-        IResolutionExpression ConstructedBy(Func<IValueResolver> constructor);
-    }
-
-    /// <summary>
-    /// Custom resolver options
-    /// </summary>
-    /// <typeparam name="TSource">Source type</typeparam>
-    public interface IResolutionExpression<TSource> : IResolutionExpression
-    {
-        /// <summary>
-        /// Use the specified member as the input to the resolver instead of the root <typeparamref name="TSource"/> object
-        /// </summary>
-        /// <param name="sourceMember">Expression for the source member</param>
-        void FromMember(Expression<Func<TSource, object>> sourceMember);
-    }
-
-    /// <summary>
-    /// Custom resolver options
-    /// </summary>
-    /// <typeparam name="TSource">Source type</typeparam>
-    /// <typeparam name="TValueResolver">Value resolver type</typeparam>
-    public interface IResolverConfigurationExpression<TSource, TValueResolver>
-        where TValueResolver : IValueResolver
-    {
-        /// <summary>
-        /// Use the specified member as the input to the resolver instead of the root <typeparamref name="TSource"/> object
-        /// </summary>
-        /// <param name="sourceMember">Expression for the source member</param>
-        /// <returns>Itself</returns>
-        IResolverConfigurationExpression<TSource, TValueResolver> FromMember(Expression<Func<TSource, object>> sourceMember);
-
-        /// <summary>
-        /// Use the specified member as the input to the resolver instead of the root <typeparamref name="TSource"/> object
-        /// </summary>
-        /// <param name="sourcePropertyName">Name of the source member</param>
-        /// <returns>Itself</returns>
-        IResolverConfigurationExpression<TSource, TValueResolver> FromMember(string sourcePropertyName);
-
-        /// <summary>
-        /// Construct the value resolver with the supplied constructor function
-        /// </summary>
-        /// <param name="constructor">Value resolver constructor function</param>
-        /// <returns>Itself</returns>
-        IResolverConfigurationExpression<TSource, TValueResolver> ConstructedBy(Func<TValueResolver> constructor);
-    }
-
-    /// <summary>
-    /// Custom resolver options
-    /// </summary>
-    /// <typeparam name="TSource">Source type</typeparam>
-    public interface IResolverConfigurationExpression<TSource> : IResolutionExpression<TSource>
-    {
-        /// <summary>
-        /// Construct the value resolver with the supplied constructor function
-        /// </summary>
-        /// <param name="constructor">Value resolver constructor function</param>
-        /// <returns>Itself</returns>
-        IResolutionExpression<TSource> ConstructedBy(Func<IValueResolver> constructor);
+        IMappingExpression<TSource, TDestination> ForCtorParam(string ctorParamName, Action<ICtorParamConfigurationExpression<TSource>> paramOptions);
     }
 }

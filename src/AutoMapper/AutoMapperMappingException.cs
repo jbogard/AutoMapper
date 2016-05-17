@@ -1,13 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 namespace AutoMapper
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+
     public class AutoMapperMappingException : Exception
     {
-        private string _message;
+        private readonly string _message;
 
         //
         // For guidelines regarding the creation of new exception types, see
@@ -26,21 +26,25 @@ namespace AutoMapper
             _message = message;
         }
 
-        public AutoMapperMappingException(string message, Exception inner)
-            : base(null, inner)
-        {
-            _message = message;
-        }
-
         public AutoMapperMappingException(ResolutionContext context)
         {
             Context = context;
+            Types = context.Types;
         }
 
         public AutoMapperMappingException(ResolutionContext context, Exception inner)
             : base(null, inner)
         {
             Context = context;
+            Types = context.Types;
+        }
+
+        public AutoMapperMappingException(ResolutionContext context, Exception inner, PropertyMap propertyMap)
+            : base(null, inner)
+        {
+            Context = context;
+            Types = context.Types;
+            PropertyMap = propertyMap;
         }
 
         public AutoMapperMappingException(ResolutionContext context, string message)
@@ -49,7 +53,9 @@ namespace AutoMapper
             _message = message;
         }
 
-        public ResolutionContext Context { get; private set; }
+        public ResolutionContext Context { get; set; }
+        public TypePair Types { get; set; }
+        public PropertyMap PropertyMap { get; set; }
 
         public override string Message
         {
@@ -57,13 +63,17 @@ namespace AutoMapper
             {
                 string message = null;
                 var newLine = Environment.NewLine;
-                if (Context != null)
+                if (Types.SourceType != null && Types.DestinationType != null)
                 {
                     message = _message + newLine + newLine + "Mapping types:";
-                    message += newLine + string.Format("{0} -> {1}", Context.SourceType.Name, Context.DestinationType.Name);
-                    message += newLine + string.Format("{0} -> {1}", Context.SourceType.FullName, Context.DestinationType.FullName);
-
-                    var destPath = GetDestPath(Context);
+                    message += newLine +
+                               $"{Types.SourceType.Name} -> {Types.DestinationType.Name}";
+                    message += newLine +
+                               $"{Types.SourceType.FullName} -> {Types.DestinationType.FullName}";
+                }
+                if (Context != null)
+                { 
+                    var destPath = GetDestPath();
                     message += newLine + newLine + "Destination path:" + newLine + destPath;
 
                     message += newLine + newLine + "Source value:" + newLine + (Context.SourceValue ?? "(null)");
@@ -81,37 +91,32 @@ namespace AutoMapper
             }
         }
 
-	    private string GetDestPath(ResolutionContext context)
-	    {
-	        var allContexts = GetContexts(context).Reverse();
+        private string GetDestPath()
+        {
+            var allContexts = GetExceptions().ToArray();
 
-	        var builder = new StringBuilder(allContexts.First().DestinationType.Name);
+            var context = allContexts[0].Context?.Parent ?? allContexts[0].Context;
+            var builder = new StringBuilder(context?.DestinationType.Name);
 
-	        foreach (var ctxt in allContexts)
-	        {
-	            if (!string.IsNullOrEmpty(ctxt.MemberName))
-	            {
-	                builder.Append(".");
-	                builder.Append(ctxt.MemberName);
-	            }
-                if (ctxt.ArrayIndex != null)
-                {
-                    builder.AppendFormat("[{0}]", ctxt.ArrayIndex);
-                }
-	        }
-	        return builder.ToString();
-	    }
-
-	    private static IEnumerable<ResolutionContext> GetContexts(ResolutionContext context)
-	    {
-            while (context.Parent != null)
+            foreach (var memberName in allContexts.Select(ctxt => ctxt?.PropertyMap?.DestinationProperty?.Name).Where(memberName => !string.IsNullOrEmpty(memberName)))
             {
-                yield return context;
-
-                context = context.Parent;
+                builder.Append(".");
+                builder.Append(memberName);
             }
-	        yield return context;
-	    }
+            return builder.ToString();
+        }
+
+        private IEnumerable<AutoMapperMappingException> GetExceptions()
+        {
+            Exception exc = this;
+            while (exc != null)
+            {
+                var mappingEx = exc as AutoMapperMappingException;
+                if (mappingEx != null)
+                    yield return mappingEx;
+                exc = exc.InnerException;
+            }
+        }
 
 #if !DEBUG
 	    public override string StackTrace

@@ -6,7 +6,9 @@ using Xunit;
 
 namespace AutoMapper.UnitTests
 {
-    public class When_using_a_member_name_replacer : AutoMapperSpecBase
+    using Should.Core.Assertions;
+
+    public class When_using_a_member_name_replacer : SpecBase
     {
         public class Source
         {
@@ -25,11 +27,12 @@ namespace AutoMapper.UnitTests
         [Fact]
         public void Should_map_properties_with_different_names()
         {
-            Mapper.Initialize(c =>
+            var config = new MapperConfiguration(c =>
             {
                 c.ReplaceMemberName("Ä", "A");
                 c.ReplaceMemberName("í", "i");
                 c.ReplaceMemberName("Airlina", "Airline");
+                c.CreateMap<Source, Destination>();
             });
 
             var source = new Source()
@@ -39,8 +42,9 @@ namespace AutoMapper.UnitTests
                 SubAirlinaFlight = 4
             };
 
-            Mapper.CreateMap<Source, Destination>();
-            var destination = Mapper.Map<Source, Destination>(source);
+            //Mapper.AddMemberConvention().AddName<ReplaceName>(_ => _.AddReplace("A", "Ä").AddReplace("i", "í").AddReplace("Airline", "Airlina")).SetMemberInfo<FieldPropertyMemberInfo>();
+            var mapper = config.CreateMapper();
+            var destination = mapper.Map<Source, Destination>(source);
 
             Assert.Equal(source.Value, destination.Value);
             Assert.Equal(source.Ävíator, destination.Aviator);

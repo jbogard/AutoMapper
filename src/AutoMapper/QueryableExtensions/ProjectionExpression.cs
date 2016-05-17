@@ -1,18 +1,33 @@
+using System;
+using IObjectDictionary = System.Collections.Generic.IDictionary<string, object>;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Collections.Generic;
+
 namespace AutoMapper.QueryableExtensions
 {
-    using System;
-    using System.Linq;
-    using System.Linq.Expressions;
+    using Execution;
+    using MemberPaths = IEnumerable<IEnumerable<MemberInfo>>;
 
-    public class ProjectionExpression<TSource> : IProjectionExpression
+    public class ProjectionExpression : IProjectionExpression
     {
-        private readonly IQueryable<TSource> _source;
-        private readonly IMappingEngine _mappingEngine;
+        private static readonly MethodInfo QueryableSelectMethod = FindQueryableSelectMethod();
 
-        public ProjectionExpression(IQueryable<TSource> source, IMappingEngine mappingEngine)
+        private readonly IQueryable _source;
+        private readonly IExpressionBuilder _builder;
+
+        public ProjectionExpression(IQueryable source, IExpressionBuilder builder)
         {
             _source = source;
-            _mappingEngine = mappingEngine;
+            _builder = builder;
+        }
+
+        private static MethodInfo FindQueryableSelectMethod()
+        {
+            Expression<Func<IQueryable<object>>> select = () => Queryable.Select(default(IQueryable<object>), default(Expression<Func<object, object>>));
+            MethodInfo method = ((MethodCallExpression)select.Body).Method.GetGenericMethodDefinition();
+            return method;
         }
 
         public IQueryable<TResult> To<TResult>(object parameters = null)
@@ -22,56 +37,96 @@ namespace AutoMapper.QueryableExtensions
 
         public IQueryable<TResult> To<TResult>(object parameters = null, params string[] membersToExpand)
         {
-            var paramValues = (parameters ?? new object()).GetType()
-                .GetProperties()
-                .ToDictionary(pi => pi.Name, pi => pi.GetValue(parameters, null));
-
+            var paramValues = GetParameters(parameters);
             return To<TResult>(paramValues, membersToExpand);
         }
 
-        public IQueryable<TResult> To<TResult>(System.Collections.Generic.IDictionary<string, object> parameters)
+        private static IObjectDictionary GetParameters(object parameters)
+        {
+            return (parameters ?? new object()).GetType()
+                .GetDeclaredProperties()
+                .ToDictionary(pi => pi.Name, pi => pi.GetValue(parameters, null));
+        }
+
+        public IQueryable<TResult> To<TResult>(IObjectDictionary parameters)
         {
             return To<TResult>(parameters, new string[0]);
         }
 
-        public IQueryable<TResult> To<TResult>(System.Collections.Generic.IDictionary<string, object> parameters, params string[] membersToExpand)
+        public IQueryable<TResult> To<TResult>(IObjectDictionary parameters, params string[] membersToExpand)
         {
-            return _source.Select(_mappingEngine.CreateMapExpression<TSource, TResult>(parameters, membersToExpand));
+            var members = GetMemberPaths(typeof(TResult), membersToExpand);
+            return To<TResult>(parameters, members);
         }
 
         public IQueryable<TResult> To<TResult>(object parameters = null, params Expression<Func<TResult, object>>[] membersToExpand)
         {
-            var members = membersToExpand.Select(expr =>
+            return To<TResult>(GetParameters(parameters), GetMemberPaths(membersToExpand));
+        }
+
+        private MemberPaths GetMemberPaths(Type type, string[] membersToExpand)
+        {
+            return membersToExpand.Select(m=>ReflectionHelper.GetMemberPath(type, m));
+        }
+
+        private MemberPaths GetMemberPaths<TResult>(Expression<Func<TResult, object>>[] membersToExpand)
+        {
+            return membersToExpand.Select(expr =>
             {
                 var visitor = new MemberVisitor();
                 visitor.Visit(expr);
-                return visitor.MemberName;
-            })
-                .ToArray();
+                return visitor.MemberPath;
+            });
+        }
+
+        public IQueryable<TResult> To<TResult>(IObjectDictionary parameters, params Expression<Func<TResult, object>>[] membersToExpand)
+        {
+            var members = GetMemberPaths(membersToExpand);
             return To<TResult>(parameters, members);
         }
 
-        public IQueryable<TResult> To<TResult>(System.Collections.Generic.IDictionary<string, object> parameters, params Expression<Func<TResult, object>>[] membersToExpand)
+        private IQueryable<TResult> To<TResult>(IObjectDictionary parameters, MemberPaths memberPathsToExpand)
         {
-            var members = membersToExpand.Select(expr =>
-            {
-                var visitor = new MemberVisitor();
-                visitor.Visit(expr);
-                return visitor.MemberName;
-            })
-                .ToArray();
-            return _source.Select(_mappingEngine.CreateMapExpression<TSource, TResult>(parameters, members));
+            var membersToExpand = memberPathsToExpand.SelectMany(m => m).Distinct().ToArray();
+
+            var mapExpression = _builder.CreateMapExpression(_source.ElementType, typeof(TResult), parameters, membersToExpand);
+
+            return _source.Provider.CreateQuery<TResult>(
+                Expression.Call(
+                    null,
+                    QueryableSelectMethod.MakeGenericMethod(_source.ElementType, typeof(TResult)),
+                    new[] { _source.Expression, Expression.Quote(mapExpression) }
+                    )
+                );
         }
 
         private class MemberVisitor : ExpressionVisitor
         {
-            protected override Expression VisitMember(MemberExpression node)
+            protected override Expression VisitLambda<T>(Expression<T> node)
             {
-                MemberName = node.Member.Name;
-                return base.VisitMember(node);
+                var memberExpression = node.Body as MemberExpression;
+                if(memberExpression != null)
+                {
+                    if(MemberPath != null)
+                    {
+                        throw new InvalidOperationException("There are more than one lambda member expressions.");
+                    }
+                    MemberPath = GetMemberPath(memberExpression);
+                }
+                return base.VisitLambda<T>(node);
             }
 
-            public string MemberName { get; private set; }
+            private IEnumerable<MemberInfo> GetMemberPath(MemberExpression memberExpression)
+            {
+                var expression = memberExpression;
+                while(expression != null)
+                {
+                    yield return expression.Member;
+                    expression = expression.Expression as MemberExpression;
+                }
+            }
+
+            public IEnumerable<MemberInfo> MemberPath { get; private set; }
         }
     }
 }
