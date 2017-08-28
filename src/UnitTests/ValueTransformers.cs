@@ -247,13 +247,11 @@ namespace AutoMapper.UnitTests
         {
             public class Source
             {
-                public string ObjectValue { get; set; }
                 public string Value { get; set; }
             }
 
             public class Dest
             {
-                public string ObjectValue { get; set; }
                 public string Value { get; set; }
             }
 
