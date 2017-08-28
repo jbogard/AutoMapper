@@ -243,5 +243,38 @@ namespace AutoMapper.UnitTests
             }
         }
 
+        public class TransformsWithDifferentTypes : AutoMapperSpecBase
+        {
+            public class Source
+            {
+                public string ObjectValue { get; set; }
+                public string Value { get; set; }
+            }
+
+            public class Dest
+            {
+                public string ObjectValue { get; set; }
+                public string Value { get; set; }
+            }
+
+            protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Source, Dest>();
+                cfg.ValueTransformers.Add<string>(dest => dest + " is straight up dope");
+                cfg.ValueTransformers.Add<object>(dest => new object());
+            });
+
+            [Fact]
+            public void Should_transform_value()
+            {
+                var source = new Source
+                {
+                    Value = "Jimmy"
+                };
+                var dest = Mapper.Map<Source, Dest>(source);
+
+                dest.Value.ShouldBe("Jimmy is straight up dope");
+            }
+        }
     }
 }
