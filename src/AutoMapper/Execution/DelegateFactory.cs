@@ -1,137 +1,67 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Linq.Expressions;
+using AutoMapper.Configuration;
+using AutoMapper.Mappers.Internal;
+
 namespace AutoMapper.Execution
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Reflection;
-    using System.Runtime.CompilerServices;
+    using static Expression;
+    using static Internal.ExpressionFactory;
+    using static ElementTypeHelper;
 
-    public class DelegateFactory
+    public static class DelegateFactory
     {
-        private readonly ConcurrentDictionary<Type, LateBoundCtor> _ctorCache =
-            new ConcurrentDictionary<Type, LateBoundCtor>();
+        private static readonly LockingConcurrentDictionary<Type, Func<object>> CtorCache = new LockingConcurrentDictionary<Type, Func<object>>(GenerateConstructor);
 
-        private readonly Func<Type, LateBoundCtor> _generateConstructor;
+        public static Func<object> CreateCtor(Type type) => CtorCache.GetOrAdd(type);
 
-        public DelegateFactory()
-        {
-            _generateConstructor = GenerateConstructor;
-        }
-
-        public Expression<LateBoundMethod<object, TValue>> CreateGet<TValue>(MethodInfo method)
-        {
-            ParameterExpression instanceParameter = Expression.Parameter(typeof(object), "target");
-            ParameterExpression argumentsParameter = Expression.Parameter(typeof (object[]), "arguments");
-
-            MethodCallExpression call;
-            if (!method.IsDefined(typeof (ExtensionAttribute), false))
-            {
-                // instance member method
-                call = Expression.Call(Expression.Convert(instanceParameter, method.DeclaringType), method,
-                    CreateParameterExpressions(method, instanceParameter, argumentsParameter));
-            }
-            else
-            {
-                // static extension method
-                call = Expression.Call(
-                    method,
-                    CreateParameterExpressions(method, instanceParameter, argumentsParameter));
-            }
-
-            Expression<LateBoundMethod<object, TValue>> lambda = Expression.Lambda<LateBoundMethod<object, TValue>>(
-                call,
-                instanceParameter,
-                argumentsParameter);
-
-            return lambda;
-        }
-
-        public Expression<LateBoundPropertyGet<TSource, TValue>> CreateGet<TSource, TValue>(PropertyInfo property)
-        {
-            ParameterExpression instanceParameter = Expression.Parameter(typeof(TSource), "target");
-
-            Expression member = IfNotNullExpression(Expression.Property(instanceParameter, property));
-
-            Expression<LateBoundPropertyGet<TSource, TValue>> lambda = Expression.Lambda<LateBoundPropertyGet<TSource, TValue>>(member,instanceParameter);
-
-            return lambda;
-        }
-
-        public Expression<LateBoundFieldGet<TSource, TValue>> CreateGet<TSource, TValue>(FieldInfo field)
-        {
-            ParameterExpression instanceParameter = Expression.Parameter(typeof(TSource), "target");
-
-            Expression member = IfNotNullExpression(Expression.Field(instanceParameter, field));
-
-            Expression<LateBoundFieldGet<TSource, TValue>> lambda = Expression.Lambda<LateBoundFieldGet<TSource, TValue>>(member, instanceParameter);
-
-            return lambda;
-        }
-
-        public static Expression IfNotNullExpression(MemberExpression member)
-        {
-            if (member.Expression != null && !member.Expression.Type.IsValueType())
-                return Expression.Condition(Expression.Equal(member.Expression, Expression.Default(member.Expression.Type)),
-                Expression.Default(member.Type), member);
-            return member;
-        }
-
-        public Expression<LateBoundFieldSet<TSource, TValue>> CreateSet<TSource, TValue>(FieldInfo field)
-        {
-            ParameterExpression instanceParameter = Expression.Parameter(field.DeclaringType, "target");
-            ParameterExpression valueParameter = Expression.Parameter(field.FieldType, "value");
-
-            MemberExpression member = Expression.Field(instanceParameter, field);
-            BinaryExpression assignExpression = Expression.Assign(member, valueParameter);
-
-            Expression<LateBoundFieldSet<TSource, TValue>> lambda = Expression.Lambda<LateBoundFieldSet<TSource, TValue>>(
-                assignExpression,
-                instanceParameter,
-                valueParameter
-                );
-
-            return lambda;
-        }
-
-        public Expression<LateBoundPropertySet<TSource, TValue>> CreateSet<TSource, TValue>(PropertyInfo property)
-        {
-            ParameterExpression instanceParameter = Expression.Parameter(property.DeclaringType, "target");
-            ParameterExpression valueParameter = Expression.Parameter(property.PropertyType, "value");
-
-            MemberExpression member = Expression.Property(instanceParameter, property);
-            BinaryExpression assignExpression = Expression.Assign(member, valueParameter);
-
-            Expression<LateBoundPropertySet<TSource, TValue>> lambda = Expression.Lambda<LateBoundPropertySet<TSource, TValue>>(
-                assignExpression,
-                instanceParameter,
-                valueParameter
-                );
-
-
-            return lambda;
-        }
-
-        public LateBoundCtor CreateCtor(Type type)
-        {
-            var ctor = _ctorCache.GetOrAdd(type, _generateConstructor);
-            return ctor;
-        }
-
-        private static LateBoundCtor GenerateConstructor(Type type)
+        private static Func<object> GenerateConstructor(Type type)
         {
             var ctorExpr = GenerateConstructorExpression(type);
 
-            return Expression.Lambda<LateBoundCtor>(Expression.Convert(ctorExpr, typeof (object))).Compile();
+            return Lambda<Func<object>>(Convert(ctorExpr, typeof(object))).Compile();
         }
+
+        public static Expression GenerateConstructorExpression(Type type, ProfileMap configuration) =>
+            configuration.AllowNullDestinationValues
+                ? GenerateConstructorExpression(type)
+                : GenerateNonNullConstructorExpression(type);
+
+        public static Expression GenerateNonNullConstructorExpression(Type type) => type.IsValueType()
+            ? Default(type)
+            : (type == typeof(string)
+                ? Constant(string.Empty)
+                : GenerateConstructorExpression(type)
+            );
 
         public static Expression GenerateConstructorExpression(Type type)
         {
-            //handle valuetypes
-            if (!type.IsClass())
+            if (type.IsValueType())
             {
-                return Expression.Convert(Expression.New(type), typeof(object));
+                return Default(type);
+            }
+
+            if (type == typeof(string))
+            {
+                return Constant(null, typeof(string));
+            }
+
+            if (type.IsInterface())
+            {
+                return
+                    type.IsDictionaryType() ? CreateCollection(type, typeof(Dictionary<,>))
+                    : type.IsReadOnlyDictionaryType() ? CreateReadOnlyCollection(type, typeof(ReadOnlyDictionary<,>))
+                    : type.IsSetType() ? CreateCollection(type, typeof(HashSet<>))
+                    : type.IsEnumerableType() ? CreateCollection(type, typeof(List<>))
+                    : InvalidType(type, $"Cannot create an instance of interface type {type}.");
+            }
+
+            if (type.IsAbstract())
+            {
+                return InvalidType(type, $"Cannot create an instance of abstract type {type}.");
             }
 
             var constructors = type
@@ -141,35 +71,42 @@ namespace AutoMapper.Execution
             //find a ctor with only optional args
             var ctorWithOptionalArgs = constructors.FirstOrDefault(c => c.GetParameters().All(p => p.IsOptional));
             if (ctorWithOptionalArgs == null)
-                throw new ArgumentException(type + " needs to have a constructor with 0 args or only optional args", "type");
-
+            {
+                return InvalidType(type, $"{type} needs to have a constructor with 0 args or only optional args.");
+            }
             //get all optional default values
             var args = ctorWithOptionalArgs
                 .GetParameters()
-                .Select(p => Expression.Constant(p.GetDefaultValue(), p.ParameterType)).ToArray();
+                .Select(p => Constant(p.GetDefaultValue(), p.ParameterType)).ToArray();
 
             //create the ctor expression
-            return Expression.New(ctorWithOptionalArgs, args);
+            return New(ctorWithOptionalArgs, args);
         }
 
-        private static Expression[] CreateParameterExpressions(MethodInfo method, Expression instanceParameter,
-            Expression argumentsParameter)
+        private static Expression CreateCollection(Type type, Type collectionType)
         {
-            var expressions = new List<UnaryExpression>();
-            var realMethodParameters = method.GetParameters();
-            if (method.IsDefined(typeof (ExtensionAttribute), false))
-            {
-                Type extendedType = method.GetParameters()[0].ParameterType;
-                expressions.Add(Expression.Convert(instanceParameter, extendedType));
-                realMethodParameters = realMethodParameters.Skip(1).ToArray();
-            }
+            var listType = collectionType.MakeGenericType(GetElementTypes(type, ElementTypeFlags.BreakKeyValuePair));
+            if (type.IsAssignableFrom(listType))
+                return ToType(New(listType), type);
 
-            expressions.AddRange(realMethodParameters.Select((parameter, index) =>
-                Expression.Convert(
-                    Expression.ArrayIndex(argumentsParameter, Expression.Constant(index)),
-                    parameter.ParameterType)));
+            return InvalidType(type, $"Cannot create an instance of interface type {type}.");
+        }
 
-            return expressions.ToArray();
+        private static Expression CreateReadOnlyCollection(Type type, Type collectionType)
+        {
+            var listType = collectionType.MakeGenericType(GetElementTypes(type, ElementTypeFlags.BreakKeyValuePair));
+            var ctor = listType.GetConstructors()[0];
+            var innerType = ctor.GetParameters()[0].ParameterType;
+            if (type.IsAssignableFrom(listType))
+                return ToType(New(ctor, GenerateConstructorExpression(innerType)), type);
+
+            return InvalidType(type, $"Cannot create an instance of interface type {type}.");
+        }
+
+        private static Expression InvalidType(Type type, string message)
+        {
+            var ex = new ArgumentException(message, "type");
+            return Block(Throw(Constant(ex)), Constant(null, type));
         }
     }
 }

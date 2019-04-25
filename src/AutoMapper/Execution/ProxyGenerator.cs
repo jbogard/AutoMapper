@@ -1,8 +1,6 @@
-#if !PORTABLE
 namespace AutoMapper.Execution
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
@@ -11,7 +9,7 @@ namespace AutoMapper.Execution
     using System.Reflection.Emit;
     using System.Text.RegularExpressions;
 
-    public class ProxyGenerator : IProxyGenerator
+    public static class ProxyGenerator
     {
         private static readonly byte[] privateKey =
             StringToByteArray(
@@ -19,19 +17,19 @@ namespace AutoMapper.Execution
 
         private static readonly byte[] privateKeyToken = StringToByteArray("be96cd2c38ef1005");
 
-        private static readonly MethodInfo delegate_Combine = typeof (Delegate).GetMethod("Combine", new[] { typeof(Delegate), typeof(Delegate) });
+        private static readonly MethodInfo delegate_Combine = typeof(Delegate).GetDeclaredMethod("Combine", new[] { typeof(Delegate), typeof(Delegate) });
 
-        private static readonly MethodInfo delegate_Remove = typeof (Delegate).GetMethod("Remove", new[] { typeof(Delegate), typeof(Delegate) });
+        private static readonly MethodInfo delegate_Remove = typeof(Delegate).GetDeclaredMethod("Remove", new[] { typeof(Delegate), typeof(Delegate) });
 
         private static readonly EventInfo iNotifyPropertyChanged_PropertyChanged =
-            typeof (INotifyPropertyChanged).GetEvent("PropertyChanged", BindingFlags.Instance | BindingFlags.Public);
+            typeof(INotifyPropertyChanged).GetRuntimeEvent("PropertyChanged");
 
         private static readonly ConstructorInfo proxyBase_ctor =
-            typeof (ProxyBase).GetConstructor(Type.EmptyTypes);
+            typeof(ProxyBase).GetDeclaredConstructor(new Type[0]);
 
         private static readonly ModuleBuilder proxyModule = CreateProxyModule();
 
-        private static readonly ConcurrentDictionary<Type, Type> proxyTypes = new ConcurrentDictionary<Type, Type>();
+        private static readonly LockingConcurrentDictionary<TypeDescription, Type> proxyTypes = new LockingConcurrentDictionary<TypeDescription, Type>(EmitProxy);
 
         private static ModuleBuilder CreateProxyModule()
         {
@@ -44,58 +42,55 @@ namespace AutoMapper.Execution
             return builder.DefineDynamicModule("AutoMapper.Proxies.emit");
         }
 
-        private static Type CreateProxyType(Type interfaceType)
+        private static Type EmitProxy(TypeDescription typeDescription)
         {
-            if (!interfaceType.IsInterface())
-            {
-                throw new ArgumentException("Only interfaces can be proxied", nameof(interfaceType));
-            }
-            string name =
-                $"Proxy<{Regex.Replace(interfaceType.AssemblyQualifiedName ?? interfaceType.FullName ?? interfaceType.Name, @"[\s,]+", "_")}>";
-            List<Type> allInterfaces = new List<Type>
-            {
-                interfaceType
-            };
-            allInterfaces.AddRange(interfaceType.GetInterfaces());
-            Debug.WriteLine(name, "Emitting proxy type");
-            TypeBuilder typeBuilder = proxyModule.DefineType(name,
-                TypeAttributes.Class | TypeAttributes.Sealed | TypeAttributes.Public, typeof (ProxyBase),
-                allInterfaces.ToArray());
+            var interfaceType = typeDescription.Type;
+            var additionalProperties = typeDescription.AdditionalProperties;
+            var propertyNames = string.Join("_", additionalProperties.Select(p => p.Name));
+            var typeName = $"Proxy_{interfaceType.FullName}_{typeDescription.GetHashCode()}_{propertyNames}";
+            const int MaxTypeNameLength = 1023;
+            typeName = typeName.Substring(0, Math.Min(MaxTypeNameLength, typeName.Length));
+            var allInterfaces = new List<Type> { interfaceType };
+            allInterfaces.AddRange(interfaceType.GetTypeInfo().ImplementedInterfaces);
+            Debug.WriteLine(typeName, "Emitting proxy type");
+            TypeBuilder typeBuilder = proxyModule.DefineType(typeName,
+                TypeAttributes.Class | TypeAttributes.Sealed | TypeAttributes.Public, typeof(ProxyBase),
+                interfaceType.IsInterface() ? new[] { interfaceType } : new Type[0]);
             ConstructorBuilder constructorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public,
-                CallingConventions.Standard, Type.EmptyTypes);
+                CallingConventions.Standard, new Type[0]);
             ILGenerator ctorIl = constructorBuilder.GetILGenerator();
             ctorIl.Emit(OpCodes.Ldarg_0);
             ctorIl.Emit(OpCodes.Call, proxyBase_ctor);
             ctorIl.Emit(OpCodes.Ret);
             FieldBuilder propertyChangedField = null;
-            if (typeof (INotifyPropertyChanged).IsAssignableFrom(interfaceType))
+            if(typeof(INotifyPropertyChanged).IsAssignableFrom(interfaceType))
             {
-                propertyChangedField = typeBuilder.DefineField("PropertyChanged", typeof (PropertyChangedEventHandler),
+                propertyChangedField = typeBuilder.DefineField("PropertyChanged", typeof(PropertyChangedEventHandler),
                     FieldAttributes.Private);
                 MethodBuilder addPropertyChangedMethod = typeBuilder.DefineMethod("add_PropertyChanged",
                     MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName |
-                    MethodAttributes.NewSlot | MethodAttributes.Virtual, typeof (void),
-                    new[] {typeof (PropertyChangedEventHandler)});
+                    MethodAttributes.NewSlot | MethodAttributes.Virtual, typeof(void),
+                    new[] { typeof(PropertyChangedEventHandler) });
                 ILGenerator addIl = addPropertyChangedMethod.GetILGenerator();
                 addIl.Emit(OpCodes.Ldarg_0);
                 addIl.Emit(OpCodes.Dup);
                 addIl.Emit(OpCodes.Ldfld, propertyChangedField);
                 addIl.Emit(OpCodes.Ldarg_1);
                 addIl.Emit(OpCodes.Call, delegate_Combine);
-                addIl.Emit(OpCodes.Castclass, typeof (PropertyChangedEventHandler));
+                addIl.Emit(OpCodes.Castclass, typeof(PropertyChangedEventHandler));
                 addIl.Emit(OpCodes.Stfld, propertyChangedField);
                 addIl.Emit(OpCodes.Ret);
                 MethodBuilder removePropertyChangedMethod = typeBuilder.DefineMethod("remove_PropertyChanged",
                     MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName |
-                    MethodAttributes.NewSlot | MethodAttributes.Virtual, typeof (void),
-                    new[] {typeof (PropertyChangedEventHandler)});
+                    MethodAttributes.NewSlot | MethodAttributes.Virtual, typeof(void),
+                    new[] { typeof(PropertyChangedEventHandler) });
                 ILGenerator removeIl = removePropertyChangedMethod.GetILGenerator();
                 removeIl.Emit(OpCodes.Ldarg_0);
                 removeIl.Emit(OpCodes.Dup);
                 removeIl.Emit(OpCodes.Ldfld, propertyChangedField);
                 removeIl.Emit(OpCodes.Ldarg_1);
                 removeIl.Emit(OpCodes.Call, delegate_Remove);
-                removeIl.Emit(OpCodes.Castclass, typeof (PropertyChangedEventHandler));
+                removeIl.Emit(OpCodes.Castclass, typeof(PropertyChangedEventHandler));
                 removeIl.Emit(OpCodes.Stfld, propertyChangedField);
                 removeIl.Emit(OpCodes.Ret);
                 typeBuilder.DefineMethodOverride(addPropertyChangedMethod,
@@ -103,14 +98,15 @@ namespace AutoMapper.Execution
                 typeBuilder.DefineMethodOverride(removePropertyChangedMethod,
                     iNotifyPropertyChanged_PropertyChanged.GetRemoveMethod());
             }
-            List<PropertyInfo> propertiesToImplement = new List<PropertyInfo>();
+            var propertiesToImplement = new List<PropertyDescription>();
             // first we collect all properties, those with setters before getters in order to enable less specific redundant getters
-            foreach (
-                PropertyInfo property in
-                    allInterfaces.Where(intf => intf != typeof (INotifyPropertyChanged))
-                        .SelectMany(intf => intf.GetProperties()))
+            foreach(var property in
+                allInterfaces.Where(intf => intf != typeof(INotifyPropertyChanged))
+                    .SelectMany(intf => intf.GetProperties())
+                    .Select(p => new PropertyDescription(p))
+                    .Concat(additionalProperties))
             {
-                if (property.CanWrite)
+                if(property.CanWrite)
                 {
                     propertiesToImplement.Insert(0, property);
                 }
@@ -119,14 +115,13 @@ namespace AutoMapper.Execution
                     propertiesToImplement.Add(property);
                 }
             }
-            Dictionary<string, PropertyEmitter> fieldBuilders = new Dictionary<string, PropertyEmitter>();
-            foreach (PropertyInfo property in propertiesToImplement)
+            var fieldBuilders = new Dictionary<string, PropertyEmitter>();
+            foreach(var property in propertiesToImplement)
             {
-                PropertyEmitter propertyEmitter;
-                if (fieldBuilders.TryGetValue(property.Name, out propertyEmitter))
+                if(fieldBuilders.TryGetValue(property.Name, out var propertyEmitter))
                 {
-                    if ((propertyEmitter.PropertyType != property.PropertyType) &&
-                        ((property.CanWrite) || (!property.PropertyType.IsAssignableFrom(propertyEmitter.PropertyType))))
+                    if((propertyEmitter.PropertyType != property.Type) &&
+                        ((property.CanWrite) || (!property.Type.IsAssignableFrom(propertyEmitter.PropertyType))))
                     {
                         throw new ArgumentException(
                             $"The interface has a conflicting property {property.Name}",
@@ -136,41 +131,34 @@ namespace AutoMapper.Execution
                 else
                 {
                     fieldBuilders.Add(property.Name,
-                        propertyEmitter =
-                            new PropertyEmitter(typeBuilder, property.Name, property.PropertyType, propertyChangedField));
-                }
-                if (property.CanRead)
-                {
-                    typeBuilder.DefineMethodOverride(propertyEmitter.GetGetter(property.PropertyType),
-                        property.GetGetMethod());
-                }
-                if (property.CanWrite)
-                {
-                    typeBuilder.DefineMethodOverride(propertyEmitter.GetSetter(property.PropertyType),
-                        property.GetSetMethod());
+                        new PropertyEmitter(typeBuilder, property, propertyChangedField));
                 }
             }
             return typeBuilder.CreateType();
         }
 
-        public Type GetProxyType(Type interfaceType)
+        public static Type GetProxyType(Type interfaceType)
         {
-            if (interfaceType == null)
+            var key = new TypeDescription(interfaceType);
+            if(!interfaceType.IsInterface())
             {
-                throw new ArgumentNullException(nameof(interfaceType));
+                throw new ArgumentException("Only interfaces can be proxied", nameof(interfaceType));
             }
+            return proxyTypes.GetOrAdd(key);
+        }
 
-            return proxyTypes.GetOrAdd(interfaceType, CreateProxyType);
+        public static Type GetSimilarType(Type sourceType, IEnumerable<PropertyDescription> additionalProperties)
+        {
+            return proxyTypes.GetOrAdd(new TypeDescription(sourceType, additionalProperties));
         }
 
         private static byte[] StringToByteArray(string hex)
         {
             int numberChars = hex.Length;
-            byte[] bytes = new byte[numberChars/2];
-            for (int i = 0; i < numberChars; i += 2)
-                bytes[i/2] = Convert.ToByte(hex.Substring(i, 2), 16);
+            byte[] bytes = new byte[numberChars / 2];
+            for(int i = 0; i < numberChars; i += 2)
+                bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             return bytes;
         }
     }
 }
-#endif

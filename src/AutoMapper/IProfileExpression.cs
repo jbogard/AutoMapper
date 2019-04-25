@@ -1,10 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Reflection;
+using AutoMapper.Configuration.Conventions;
+using AutoMapper.Mappers;
+
 namespace AutoMapper
 {
-    using System;
-    using System.Reflection;
-    using Configuration.Conventions;
-    using Mappers;
-
     /// <summary>
     /// Configuration for profile-specific maps
     /// </summary>
@@ -105,12 +107,18 @@ namespace AutoMapper
         /// <summary>
         /// Allow null destination values. If false, destination objects will be created for deep object graphs. Default true.
         /// </summary>
-        bool AllowNullDestinationValues { get; set; }
+        bool? AllowNullDestinationValues { get; set; }
 
         /// <summary>
         /// Allow null destination collections. If true, null source collections result in null destination collections. Default false.
         /// </summary>
-        bool AllowNullCollections { get; set; }
+        bool? AllowNullCollections { get; set; }
+
+        /// <summary>
+        /// Allows to enable null-value propagation for query mapping. 
+        /// <remarks>Some providers (such as EntityFrameworkQueryVisitor) do not work with this feature enabled!</remarks>
+        /// </summary>
+        bool? EnableNullPropagationForQueryMapping { get; set; }
 
         /// <summary>
         /// Naming convention for source members
@@ -128,11 +136,36 @@ namespace AutoMapper
         /// <param name="configuration">configuration callback</param>
         void ForAllMaps(Action<TypeMap, IMappingExpression> configuration);
 
+        /// <summary>
+        /// Customize configuration for all members across all maps
+        /// </summary>
+        /// <param name="condition">Condition</param>
+        /// <param name="memberOptions">Callback for member options. Use the property map for conditional maps.</param>
+        void ForAllPropertyMaps(Func<PropertyMap, bool> condition, Action<PropertyMap, IMemberConfigurationExpression> memberOptions);
+
         Func<PropertyInfo, bool> ShouldMapProperty { get; set; }
         Func<FieldInfo, bool> ShouldMapField { get; set; }
+        Func<MethodInfo, bool> ShouldMapMethod { get; set; }
+        Func<ConstructorInfo, bool> ShouldUseConstructor { get; set; }
+        
         string ProfileName { get; }
         IMemberConfiguration AddMemberConfiguration();
         IConditionalObjectMapper AddConditionalObjectMapper();
+
+        /// <summary>
+        /// Include extension methods against source members for matching destination members to. Default source extension methods from <see cref="System.Linq.Enumerable"/>
+        /// </summary>
+        /// <param name="type">Static type that contains extension methods</param>
         void IncludeSourceExtensionMethods(Type type);
+
+        /// <summary>
+        /// Value transformers. Modify the list directly or use <see cref="ValueTransformerConfigurationExtensions.Add{TValue}"/>
+        /// </summary>
+        IList<ValueTransformerConfiguration> ValueTransformers { get; }
+
+        /// <summary>
+        /// Validate maps created dynamically/inline on the first map. Defaults to true.
+        /// </summary>
+        bool? ValidateInlineMaps { get; set; }
     }
 }

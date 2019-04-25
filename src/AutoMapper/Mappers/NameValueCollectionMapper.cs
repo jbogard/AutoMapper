@@ -1,20 +1,14 @@
-﻿using System;
-using System.Linq;
+﻿using System.Collections.Specialized;
 using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 using System.Reflection;
 
-#if !PORTABLE
 namespace AutoMapper.Mappers
 {
-    using System.Collections.Specialized;
-
-    public class NameValueCollectionMapper : IObjectMapExpression
+    public class NameValueCollectionMapper : IObjectMapper
     {
-        public static NameValueCollection Map(NameValueCollection source)
+        private static NameValueCollection Map(NameValueCollection source)
         {
-            if (source == null)
-                return null;
-
             var nvc = new NameValueCollection();
             foreach (var s in source.AllKeys)
                 nvc.Add(s, source[s]);
@@ -22,24 +16,13 @@ namespace AutoMapper.Mappers
             return nvc;
         }
 
-        private static readonly MethodInfo MapMethodInfo = typeof(NameValueCollectionMapper).GetAllMethods().First(_ => _.IsStatic);
+        private static readonly MethodInfo MapMethodInfo = typeof(NameValueCollectionMapper).GetDeclaredMethod(nameof(Map));
 
-        public object Map(ResolutionContext context)
-        {
-            return MapMethodInfo.Invoke(null, new [] {context.SourceValue});
-        }
+        public bool IsMatch(TypePair context) => context.SourceType == typeof (NameValueCollection) &&
+                                                 context.DestinationType == typeof (NameValueCollection);
 
-        public bool IsMatch(TypePair context)
-        {
-            return
-                context.SourceType == typeof (NameValueCollection) &&
-                context.DestinationType == typeof (NameValueCollection);
-        }
-
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
-        {
-            return Expression.Call(null, MapMethodInfo, sourceExpression);
-        }
+        public Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression, Expression contextExpression) => 
+            Call(null, MapMethodInfo, sourceExpression);
     }
 }
-#endif

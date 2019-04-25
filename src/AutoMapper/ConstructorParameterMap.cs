@@ -1,80 +1,45 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace AutoMapper
 {
-    using AutoMapper.Execution;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using static System.Linq.Expressions.Expression;
-    using static ExpressionExtensions;
-    using System.Reflection;
-    using Configuration;
-    using Mappers;
-
-    public class ConstructorParameterMap
+    public class ConstructorParameterMap : DefaultMemberMap
     {
-        public ConstructorParameterMap(ParameterInfo parameter, IMemberGetter[] sourceMembers, bool canResolve)
+        public ConstructorParameterMap(TypeMap typeMap, ParameterInfo parameter, IEnumerable<MemberInfo> sourceMembers,
+            bool canResolveValue)
         {
+            TypeMap = typeMap;
             Parameter = parameter;
-            SourceMembers = sourceMembers;
-            CanResolve = canResolve;
+            SourceMembers = sourceMembers.ToList();
+            CanResolveValue = canResolveValue;
         }
 
         public ParameterInfo Parameter { get; }
 
-        public IMemberGetter[] SourceMembers { get; }
+        public override TypeMap TypeMap { get; }
 
-        public bool CanResolve { get; set; }
-        public LambdaExpression CustomExpression { get; set; }
-        public Func<object, ResolutionContext, object> CustomValueResolver { get; set; }
+        public override Type SourceType =>
+            CustomMapExpression?.Type
+            ?? CustomMapFunction?.Type
+            ?? (Parameter.IsOptional 
+                ? Parameter.ParameterType 
+                : SourceMembers.Last().GetMemberType());
 
-        public Type SourceType => CustomExpression?.ReturnType ?? SourceMembers.LastOrDefault()?.MemberType;
-        public Type DestinationType => Parameter.ParameterType;
+        public override Type DestinationType => Parameter.ParameterType;
 
-        public Expression CreateExpression(TypeMapRegistry typeMapRegistry,
-            ParameterExpression srcParam,
-            ParameterExpression ctxtParam,
-            ref ParameterExpression parameterContext)
-        {
-            if (CustomExpression != null)
-                return CustomExpression.ConvertReplaceParameters(srcParam).IfNotNull();
+        public override IEnumerable<MemberInfo> SourceMembers { get; }
+        public override string DestinationName => Parameter.Member.DeclaringType + "." + Parameter.Member + ".parameter " + Parameter.Name;
 
-            if (CustomValueResolver != null)
-            {
-                return Invoke(Constant(CustomValueResolver), srcParam, ctxtParam);
-            }
+        public bool HasDefaultValue => Parameter.IsOptional;
 
-            if (!SourceMembers.Any() && Parameter.IsOptional)
-            {
-                return Constant(Parameter.GetDefaultValue());
-            }
+        public override LambdaExpression CustomMapExpression { get; set; }
+        public override LambdaExpression CustomMapFunction { get; set; }
 
-            if (typeMapRegistry.GetTypeMap(new TypePair(SourceType, DestinationType)) == null
-                && Parameter.IsOptional)
-            {
-                return Constant(Parameter.GetDefaultValue());
-            }
+        public override bool CanResolveValue { get; set; }
 
-            var valueResolverExpr = SourceMembers.Aggregate(
-                (Expression) srcParam,
-                (inner, getter) => getter.MemberInfo is MethodInfo
-                    ? getter.MemberInfo.IsStatic()
-                        ? Call(null, (MethodInfo) getter.MemberInfo, inner)
-                        : (Expression) Call(inner, (MethodInfo) getter.MemberInfo)
-                    : MakeMemberAccess(getter.MemberInfo.IsStatic() ? null : inner, getter.MemberInfo)
-                );
-            valueResolverExpr = valueResolverExpr.IfNotNull();
-
-            if ((SourceType.IsEnumerableType() && SourceType != typeof (string))
-                || typeMapRegistry.GetTypeMap(new TypePair(SourceType, DestinationType)) != null
-                || !DestinationType.IsAssignableFrom(SourceType))
-            {
-                /*
-                var value = context.Mapper.Map(result, null, sourceType, destinationType, context);
-                 */
-                return TypeMapPlanBuilder.ContextMap(ToObject(valueResolverExpr), Constant(null), DestinationType, ref parameterContext);
-            }
-            return valueResolverExpr;
-        }
+        public override bool Inline { get; set; }
     }
 }

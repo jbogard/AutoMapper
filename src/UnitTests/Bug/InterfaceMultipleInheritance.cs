@@ -1,5 +1,5 @@
 using System;
-using Should;
+using Shouldly;
 using Xunit;
 
 namespace AutoMapper.UnitTests.Bug
@@ -35,12 +35,12 @@ namespace AutoMapper.UnitTests.Bug
 
             public interface IMapToElementWritable 
             {
-                new string Prop { get; set; }
+                string Prop { get; set; }
             }
 
             public interface IMapToElementWritableDerived : IMapToElementWritable
             {
-                new string Prop2 { get; set; }
+                string Prop2 { get; set; }
             }
 
             public class MapFrom : IMapFrom
@@ -56,7 +56,7 @@ namespace AutoMapper.UnitTests.Bug
 
             public class MapFromElementDerived : MapFromElement, IMapFromElementDerivedBoth
             {
-                public string Prop { get; set; }
+                public new string Prop { get; set; }
                 public string Prop2 { get; set; }
             }
 
@@ -100,7 +100,7 @@ namespace AutoMapper.UnitTests.Bug
             public void Should_Map_UsingDerivedInterface()
             {
                 var element = (IMapToElementWritableDerived)_destination.Element;
-                element.Prop2.ShouldEqual("PROP2");
+                element.Prop2.ShouldBe("PROP2");
             }
         }
 
@@ -215,7 +215,7 @@ namespace AutoMapper.UnitTests.Bug
             [Fact]
             public void Should_Map_UsingDerivedInterface()
             {
-                _destination.prop4.ShouldEqual("PROP4");
+                _destination.prop4.ShouldBe("PROP4");
             }
         }
     }

@@ -1,153 +1,69 @@
-﻿namespace AutoMapper
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using AutoMapper.Internal;
+
+namespace AutoMapper
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Reflection;
-    using Execution;
-    using static System.Linq.Expressions.Expression;
+    using static Expression;
 
     internal static class ExpressionExtensions
     {
-        public static Expression ToObject(Expression expression)
+        public static Expression MemberAccesses(this IEnumerable<MemberInfo> members, Expression obj) =>
+            members
+                .Aggregate(
+                        obj,
+                        (inner, getter) => getter is MethodInfo method ?
+                            (getter.IsStatic() ? Call(null, method, inner) : (Expression)Call(inner, method)) :
+                            MakeMemberAccess(getter.IsStatic() ? null : inner, getter));
+
+        public static IEnumerable<MemberExpression> GetMembers(this Expression expression)
         {
-            return expression.Type == typeof(object) ? expression : Convert(expression, typeof(object));
+            var memberExpression = expression as MemberExpression;
+            if(memberExpression == null)
+            {
+                return new MemberExpression[0];
+            }
+            return memberExpression.GetMembers();
         }
 
-        public static Expression ToType(Expression expression, Type type)
+        public static IEnumerable<MemberExpression> GetMembers(this MemberExpression expression)
         {
-            return expression.Type == type ? expression : Convert(expression, type);
+            while(expression != null)
+            {
+                yield return expression;
+                expression = expression.Expression as MemberExpression;
+            }
         }
 
-        public static Expression ConsoleWriteLine(string value, params Expression[] values)
+        public static void EnsureMemberPath(this LambdaExpression exp, string name)
         {
-            return Call(typeof (Debug).GetMethod("WriteLine", new[] {typeof (string), typeof(object[])}), 
-                Constant(value), 
-                NewArrayInit(typeof(object), values.Select(ToObject).ToArray()));
+            if(!exp.IsMemberPath())
+            {
+                throw new ArgumentOutOfRangeException(name, "Only member accesses are allowed. "+exp);
+            }
         }
 
-        private static readonly ExpressionVisitor IfNullVisitor = new IfNotNullVisitor();
+        public static bool IsMemberPath(this LambdaExpression exp) => exp.Body.GetMembers().LastOrDefault()?.Expression == exp.Parameters.First();
 
         public static Expression ReplaceParameters(this LambdaExpression exp, params Expression[] replace)
-        {
-            var replaceExp = exp.Body;
-            for (var i = 0; i < Math.Min(replace.Count(), exp.Parameters.Count()); i++)
-                replaceExp = replaceExp.Replace(exp.Parameters[i], replace[i]);
-            return replaceExp;
-        }
+            => ExpressionFactory.ReplaceParameters(exp, replace);
 
-        public static Expression ConvertReplaceParameters(this LambdaExpression exp, params ParameterExpression[] replace)
-        {
-            var replaceExp = exp.Body;
-            for (var i = 0; i < Math.Min(replace.Count(), exp.Parameters.Count()); i++)
-                replaceExp = new ConvertingVisitor(exp.Parameters[i], replace[i]).Visit(replaceExp);
-            return replaceExp;
-        }
+        public static Expression ConvertReplaceParameters(this LambdaExpression exp, params Expression[] replace)
+            => ExpressionFactory.ConvertReplaceParameters(exp, replace);
 
-        public static Expression Replace(this Expression exp, Expression old, Expression replace) => new ReplaceExpressionVisitor(old, replace).Visit(exp);
+        public static Expression Replace(this Expression exp, Expression old, Expression replace)
+            => ExpressionFactory.Replace(exp, old, replace);
 
-        public static LambdaExpression Concat(this LambdaExpression expr, LambdaExpression concat) => (LambdaExpression)new ExpressionConcatVisitor(expr).Visit(concat);
+        public static LambdaExpression Concat(this LambdaExpression expr, LambdaExpression concat)
+            => ExpressionFactory.Concat(expr, concat);
 
-        public static Expression IfNotNull(this Expression expression) => IfNullVisitor.Visit(expression);
+        public static Expression NullCheck(this Expression expression, Type destinationType)
+            => ExpressionFactory.NullCheck(expression, destinationType);
 
-        public static Expression IfNullElse(this Expression expression, params Expression[] ifElse)
-        {
-            return ifElse.Any()
-                ? Condition(NotEqual(expression, Default(expression.Type)), expression, ifElse.First().IfNullElse(ifElse.Skip(1).ToArray()))
-                : expression;
-        }
-
-        internal class IfNotNullVisitor : ExpressionVisitor
-        {
-            private readonly IList<MemberExpression> AllreadyUpdated = new List<MemberExpression>();
-            protected override Expression VisitMember(MemberExpression node)
-            {
-                if (AllreadyUpdated.Contains(node))
-                    return base.VisitMember(node);
-                AllreadyUpdated.Add(node);
-                return Visit(DelegateFactory.IfNotNullExpression(node));
-            }
-        }
-
-        internal class ConvertingVisitor : ExpressionVisitor
-        {
-            private readonly ParameterExpression _newParam;
-            private readonly ParameterExpression _oldParam;
-
-            public ConvertingVisitor(ParameterExpression oldParam, ParameterExpression newParam)
-            {
-                _newParam = newParam;
-                _oldParam = oldParam;
-            }
-
-            protected override Expression VisitMember(MemberExpression node)
-            {
-                return node.Expression == _oldParam
-                    ? MakeMemberAccess(Convert(_newParam, _oldParam.Type), node.Member)
-                    : base.VisitMember(node);
-            }
-
-            protected override Expression VisitParameter(ParameterExpression node)
-            {
-                return node == _oldParam ? _newParam : base.VisitParameter(node);
-            }
-
-            protected override Expression VisitMethodCall(MethodCallExpression node)
-            {
-                return node.Object == _oldParam
-                    ? Call(Convert(_newParam, _oldParam.Type), node.Method)
-                    : base.VisitMethodCall(node);
-            }
-        }
-
-        internal class ReplaceExpressionVisitor : ExpressionVisitor
-        {
-            private readonly Expression _oldExpression;
-            private readonly Expression _newExpression;
-
-            public ReplaceExpressionVisitor(Expression oldExpression, Expression newExpression)
-            {
-                _oldExpression = oldExpression;
-                _newExpression = newExpression;
-            }
-
-            public override Expression Visit(Expression node)
-            {
-                return _oldExpression == node ? _newExpression : base.Visit(node);
-            }
-        }
-
-        internal class ExpressionConcatVisitor : ExpressionVisitor
-        {
-            private readonly LambdaExpression _overrideExpression;
-
-            public ExpressionConcatVisitor(LambdaExpression overrideExpression)
-            {
-                _overrideExpression = overrideExpression;
-            }
-
-            public override Expression Visit(Expression node)
-            {
-                if (_overrideExpression == null)
-                    return node;
-                if (node.NodeType != ExpressionType.Lambda && node.NodeType != ExpressionType.Parameter)
-                {
-                    var expression = node;
-                    if (node.Type == typeof(object))
-                        expression = Convert(node, _overrideExpression.Parameters[0].Type);
-
-                    return _overrideExpression.ReplaceParameters(expression);
-                }
-                return base.Visit(node);
-            }
-
-            protected override Expression VisitLambda<T>(Expression<T> node)
-            {
-                return Lambda(Visit(node.Body), node.Parameters);
-            }
-        }
-
+        public static Expression IfNullElse(this Expression expression, Expression then, Expression @else = null)
+            => ExpressionFactory.IfNullElse(expression, then, @else);
     }
 }

@@ -1,9 +1,10 @@
-﻿namespace AutoMapper.UnitTests.Projection
+﻿using System;
+
+namespace AutoMapper.UnitTests.Projection
 {
     using QueryableExtensions;
-    using Should;
+    using Shouldly;
     using System.Linq;
-    using Should.Core.Assertions;
     using Xunit;
 
     public class ProjectEnumTest
@@ -15,7 +16,7 @@
             _config = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap<Customer, CustomerDto>();
-                cfg.CreateMap<CustomerType, string>().ProjectUsing(ct => ct.ToString().ToUpper());
+                cfg.CreateMap<CustomerType, string>().ConvertUsing(ct => ct.ToString().ToUpper());
             });
         }
 
@@ -26,7 +27,7 @@
 
             var projected = customers.ProjectTo<CustomerDto>(_config);
             projected.ShouldNotBeNull();
-            Assert.Equal(customers.Single().CustomerType.ToString().ToUpper(), projected.Single().CustomerType);
+            Assert.Equal(customers.Single().CustomerType.ToString(), projected.Single().CustomerType, StringComparer.OrdinalIgnoreCase);
         }
 
         public class Customer
@@ -69,7 +70,7 @@
         protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
         {
             cfg.CreateMap<Source, Dest>()
-                .ProjectUsing(src => new Dest {Value = 10});
+                .ConvertUsing(src => new Dest {Value = 10});
         });
 
         [Fact]

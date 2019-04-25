@@ -1,10 +1,10 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Xunit;
-using Should;
+using Shouldly;
 using AutoMapper.Configuration.Conventions;
 
 namespace AutoMapper.UnitTests.Tests
@@ -55,11 +55,6 @@ namespace AutoMapper.UnitTests.Tests
         private class TestProfile : Profile
         {
             public override string ProfileName => "Test";
-
-            protected override void Configure()
-            {
-                
-            }
         }
 
         [Fact]
@@ -68,12 +63,13 @@ namespace AutoMapper.UnitTests.Tests
             var mappingOptions = new TestProfile();
             //mappingOptions.SourceMemberNamingConvention = new PascalCaseNamingConvention();
             //mappingOptions.DestinationMemberNamingConvention = new PascalCaseNamingConvention();
+            var profile = new ProfileMap(mappingOptions);
 
-            var typeMap = _factory.CreateTypeMap(typeof(Source), typeof(Destination), mappingOptions, MemberList.Destination);
+            var typeMap = _factory.CreateTypeMap(typeof(Source), typeof(Destination), profile);
 
-            var propertyMaps = typeMap.GetPropertyMaps();
+            var propertyMaps = typeMap.PropertyMaps;
 
-            propertyMaps.Count().ShouldEqual(2);
+            propertyMaps.Count().ShouldBe(2);
         }
     }
 
@@ -81,7 +77,7 @@ namespace AutoMapper.UnitTests.Tests
     {
         private TypeMapFactory _factory;
         private TypeMap _map;
-        private Profile _mappingOptions;
+        private ProfileMap _mappingOptions;
         
         private class Source
         {
@@ -101,22 +97,18 @@ namespace AutoMapper.UnitTests.Tests
         private class TestProfile : Profile
         {
             public override string ProfileName => "Test";
-
-            protected override void Configure()
-            {
-
-            }
         }
         protected override void Establish_context()
         {
             var namingConvention = new StubNamingConvention(s => s.Value.ToLower()){SeparatorCharacter = "__", SplittingExpression = new Regex(@"[\p{Ll}\p{Lu}0-9]+(?=__?)")};
 
-            _mappingOptions = new TestProfile();
-            _mappingOptions.AddMemberConfiguration().AddMember<NameSplitMember>(_ =>
+            var profile = new TestProfile();
+            profile.AddMemberConfiguration().AddMember<NameSplitMember>(_ =>
             {
                 _.SourceMemberNamingConvention = namingConvention;
                 _.DestinationMemberNamingConvention = new PascalCaseNamingConvention();
             });
+            _mappingOptions = new ProfileMap(profile);
 
             _factory = new TypeMapFactory();
 
@@ -124,13 +116,13 @@ namespace AutoMapper.UnitTests.Tests
 
         protected override void Because_of()
         {
-            _map = _factory.CreateTypeMap(typeof(Source), typeof(Destination), _mappingOptions, MemberList.Destination);
+            _map = _factory.CreateTypeMap(typeof(Source), typeof(Destination), _mappingOptions);
         }
 
         [Fact]
         public void Should_split_using_naming_convention_rules()
         {
-            _map.GetPropertyMaps().Count().ShouldEqual(1);
+            _map.PropertyMaps.Count().ShouldBe(1);
         }
     }
 
@@ -138,7 +130,7 @@ namespace AutoMapper.UnitTests.Tests
     {
         private TypeMapFactory _factory;
         private TypeMap _map;
-        private Profile _mappingOptions;
+        private ProfileMap _mappingOptions;
 
         private class Source
         {
@@ -158,36 +150,32 @@ namespace AutoMapper.UnitTests.Tests
         private class TestProfile : Profile
         {
             public override string ProfileName => "Test";
-
-            protected override void Configure()
-            {
-
-            }
         }
 
         protected override void Establish_context()
         {
             var namingConvention = new StubNamingConvention(s => s.Value.ToLower()) { SeparatorCharacter = "__", SplittingExpression = new Regex(@"[\p{Ll}\p{Lu}0-9]+(?=__?)") };
 
-            _mappingOptions = new TestProfile();
-            _mappingOptions.AddMemberConfiguration().AddMember<NameSplitMember>(_ =>
+            var profile = new TestProfile();
+            profile.AddMemberConfiguration().AddMember<NameSplitMember>(_ =>
             {
                 _.SourceMemberNamingConvention = new PascalCaseNamingConvention();
                 _.DestinationMemberNamingConvention = namingConvention;
             });
+            _mappingOptions = new ProfileMap(profile);
 
             _factory = new TypeMapFactory();
         }
 
         protected override void Because_of()
         {
-            _map = _factory.CreateTypeMap(typeof(Source), typeof(Destination), _mappingOptions, MemberList.Destination);
+            _map = _factory.CreateTypeMap(typeof(Source), typeof(Destination), _mappingOptions);
         }
 
         [Fact]
         public void Should_split_using_naming_convention_rules()
         {
-            _map.GetPropertyMaps().Count().ShouldEqual(1);
+            _map.PropertyMaps.Count().ShouldBe(1);
         }
     }
 
@@ -198,7 +186,7 @@ namespace AutoMapper.UnitTests.Tests
         public class Source
         {
             public int Value { get; set; }
-            public int Ävíator { get; set; }
+            public int è†™éŸ†tor { get; set; }
             public int SubAirlinaFlight { get; set; }
         }
 
@@ -219,17 +207,17 @@ namespace AutoMapper.UnitTests.Tests
         {
             var config = new MapperConfiguration(cfg =>
             {
-                cfg.ReplaceMemberName("A", "Ä");
-                cfg.ReplaceMemberName("i", "í");
+                cfg.ReplaceMemberName("A", "Ã„");
+                cfg.ReplaceMemberName("i", "Ã­");
                 cfg.ReplaceMemberName("Airline", "Airlina");
                 cfg.CreateMap<Source, Destination>();
             });
 
             var mapper = config.CreateMapper();
-            var dest = mapper.Map<Destination>(new Source {Ävíator = 3, SubAirlinaFlight = 4, Value = 5});
-            dest.Aviator.ShouldEqual(3);
-            dest.SubAirlineFlight.ShouldEqual(4);
-            dest.Value.ShouldEqual(5);
+            var dest = mapper.Map<Destination>(new Source {è†™éŸ†tor = 3, SubAirlinaFlight = 4, Value = 5});
+            dest.Aviator.ShouldBe(3);
+            dest.SubAirlineFlight.ShouldBe(4);
+            dest.Value.ShouldBe(5);
         }
     }
 }

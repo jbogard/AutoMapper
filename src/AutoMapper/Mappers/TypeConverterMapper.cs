@@ -1,70 +1,49 @@
-using System.Linq;
+using System;
+using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Reflection;
+using AutoMapper.Configuration;
+using static System.Linq.Expressions.Expression;
 
-#if !PORTABLE
 namespace AutoMapper.Mappers
 {
-    using System;
-    using System.ComponentModel;
-    using Configuration;
-
-    public class TypeConverterMapper : IObjectMapExpression
+    public class TypeConverterMapper : IObjectMapper
     {
-        private static TDestination Map<TSource, TDestination>(TSource source, ResolutionContext context)
+        private static TDestination Map<TSource, TDestination>(TSource source)
         {
-            if (source == null)
-            {
-                return (TDestination)(context.ConfigurationProvider.AllowNullDestinationValues
-                 ? ObjectCreator.CreateNonNullValue(typeof(TDestination))
-                 : ObjectCreator.CreateObject(typeof(TDestination)));
-            }
-            return GetConverter<TSource, TDestination>(source);
-        }
+            var typeConverter = GetTypeConverter(typeof(TSource));
 
-        private static TDestination GetConverter<TSource, TDestination>(TSource source)
-        {
-            TypeConverter typeConverter = GetTypeConverter(typeof(TSource));
             if (typeConverter.CanConvertTo(typeof(TDestination)))
+            {
                 return (TDestination)typeConverter.ConvertTo(source, typeof(TDestination));
-            if (typeof(TDestination).IsNullableType() &&
-                typeConverter.CanConvertTo(Nullable.GetUnderlyingType(typeof(TDestination))))
-                return (TDestination)typeConverter.ConvertTo(source, Nullable.GetUnderlyingType(typeof(TDestination)));
+            }
 
             typeConverter = GetTypeConverter(typeof(TDestination));
             if (typeConverter.CanConvertFrom(typeof(TSource)))
+            {
                 return (TDestination)typeConverter.ConvertFrom(source);
+            }
 
-            return default(TDestination);
+            return default;
         }
 
-        private static readonly MethodInfo MapMethodInfo = typeof(TypeConverterMapper).GetAllMethods().First(_ => _.IsStatic);
-
-        public object Map(ResolutionContext context)
-        {
-            return MapMethodInfo.MakeGenericMethod(context.SourceType, context.DestinationType).Invoke(null, new[] { context.SourceValue, context });
-        }
+        private static readonly MethodInfo MapMethodInfo = typeof(TypeConverterMapper).GetDeclaredMethod(nameof(Map));
 
         public bool IsMatch(TypePair context)
         {
             var sourceTypeConverter = GetTypeConverter(context.SourceType);
             var destTypeConverter = GetTypeConverter(context.DestinationType);
 
-            return sourceTypeConverter.CanConvertTo(context.DestinationType) ||
-                   (context.DestinationType.IsNullableType() &&
-                    sourceTypeConverter.CanConvertTo(Nullable.GetUnderlyingType(context.DestinationType)) ||
-                    destTypeConverter.CanConvertFrom(context.SourceType));
+            return sourceTypeConverter.CanConvertTo(context.DestinationType) || destTypeConverter.CanConvertFrom(context.SourceType);
         }
 
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
-        {
-            return Expression.Call(null, MapMethodInfo.MakeGenericMethod(sourceExpression.Type, destExpression.Type), sourceExpression, contextExpression);
-        }
+        public Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression,
+            Expression contextExpression) =>
+            Call(null,
+                MapMethodInfo.MakeGenericMethod(sourceExpression.Type, destExpression.Type),
+                sourceExpression);
 
-        private static TypeConverter GetTypeConverter(Type type)
-        {
-            return TypeDescriptor.GetConverter(type);
-        }
+        private static TypeConverter GetTypeConverter(Type type) => TypeDescriptor.GetConverter(type);
     }
 }
-#endif

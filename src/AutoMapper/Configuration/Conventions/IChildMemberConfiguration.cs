@@ -1,10 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+
 namespace AutoMapper.Configuration.Conventions
 {
-    using System;
-    using System.Collections.Generic;
-
     public interface IChildMemberConfiguration
     {
-        bool MapDestinationPropertyToSource(IProfileConfiguration options, TypeDetails sourceType, Type destType, Type destMemberType, string nameToSearch, LinkedList<IMemberGetter> resolvers, IMemberConfiguration parent);
+        bool MapDestinationPropertyToSource(ProfileMap options, TypeDetails sourceType, Type destType, Type destMemberType, string nameToSearch, LinkedList<MemberInfo> resolvers, IMemberConfiguration parent);
     }
 }

@@ -4,11 +4,11 @@ pull_requests:
 branches:
   only:
   - master
-services: mssql2014
+image: Visual Studio 2017
 nuget:
   disable_publish_on_pr: true
 build_script:
-- cmd: .\psake.bat ci
+- cmd: .\psake.cmd ci
 test: off
 artifacts:
 - path: src\AutoMapper\bin\release\*.nupkg

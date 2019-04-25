@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Should;
+using Shouldly;
 using Xunit;
 
 namespace AutoMapper.UnitTests.Bug
@@ -21,14 +21,14 @@ namespace AutoMapper.UnitTests.Bug
         [Fact]
         public void Should_work()
         {
-            _destination.ShouldEqual(Converter<int, object>.Result);
+            _destination.ShouldBe(Converter<int, object>.Result);
         }
 
         public class Converter<TSource, TDestination> : ITypeConverter<List<TSource>, List<TDestination>>
         {
             public static readonly List<TDestination> Result = new List<TDestination>();
 
-            public List<TDestination> Convert(List<TSource> source, ResolutionContext context)
+            public List<TDestination> Convert(List<TSource> source, List<TDestination> destination, ResolutionContext context)
             {
                 return Result;
             }
@@ -78,32 +78,32 @@ namespace AutoMapper.UnitTests.Bug
             public static OtherDestination<T> OpenDestinationViaClosedSource = new OtherDestination<T>();
             public static Destination<object> ClosedDestinationViaOpenSource = new Destination<object>();
 
-            public Destination<T> Convert(Source<T> source, ResolutionContext context)
+            public Destination<T> Convert(Source<T> source, Destination<T> dest, ResolutionContext context)
             {
                 return SomeDestination;
             }
 
-            OtherDestination<T> ITypeConverter<OtherSource<T>, OtherDestination<T>>.Convert(OtherSource<T> source, ResolutionContext context)
+            OtherDestination<T> ITypeConverter<OtherSource<T>, OtherDestination<T>>.Convert(OtherSource<T> source, OtherDestination<T> dest, ResolutionContext context)
             {
                 return SomeOtherDestination;
             }
 
-            int ITypeConverter<Source<T>, int>.Convert(Source<T> source, ResolutionContext context)
+            int ITypeConverter<Source<T>, int>.Convert(Source<T> source, int dest, ResolutionContext context)
             {
                 return NongenericDestination;
             }
 
-            Destination<T> ITypeConverter<int, Destination<T>>.Convert(int source, ResolutionContext context)
+            Destination<T> ITypeConverter<int, Destination<T>>.Convert(int source, Destination<T> dest, ResolutionContext context)
             {
                 return SomeDestination;
             }
 
-            Destination<object> ITypeConverter<OtherSource<T>, Destination<object>>.Convert(OtherSource<T> source, ResolutionContext context)
+            Destination<object> ITypeConverter<OtherSource<T>, Destination<object>>.Convert(OtherSource<T> source, Destination<object> dest, ResolutionContext context)
             {
                 return ClosedDestinationViaOpenSource;
             }
 
-            OtherDestination<T> ITypeConverter<Source<object>, OtherDestination<T>>.Convert(Source<object> source, ResolutionContext context)
+            OtherDestination<T> ITypeConverter<Source<object>, OtherDestination<T>>.Convert(Source<object> source, OtherDestination<T> dest, ResolutionContext context)
             {
                 return OpenDestinationViaClosedSource;
             }
@@ -114,7 +114,7 @@ namespace AutoMapper.UnitTests.Bug
         {
             public static IReadOnlyDictionary<T1, T2> ReadOnlyDictionaryDestination = new Dictionary<T1, T2>();
 
-            public IReadOnlyDictionary<T1, T2> Convert(Hashtable source, ResolutionContext context)
+            public IReadOnlyDictionary<T1, T2> Convert(Hashtable source, IReadOnlyDictionary<T1, T2> dest, ResolutionContext context)
             {
                 return ReadOnlyDictionaryDestination;
             }
@@ -147,10 +147,10 @@ namespace AutoMapper.UnitTests.Bug
         {
             _destination.ShouldBeSameAs(Converter<int>.SomeDestination);
             _otherDestination.ShouldBeSameAs(Converter<int>.SomeOtherDestination);
-            _openGenericToNonGenericDestination.ShouldEqual(Converter<int>.NongenericDestination);
+            _openGenericToNonGenericDestination.ShouldBe(Converter<int>.NongenericDestination);
             _nonGenericToOpenGenericDestination.ShouldBeSameAs(Converter<int>.SomeDestination);
-            _openGenericToClosedGenericDestination.ShouldEqual(Converter<int>.ClosedDestinationViaOpenSource);
-            _closedGenericToOpenGenericDestination.ShouldEqual(Converter<int>.OpenDestinationViaClosedSource);
+            _openGenericToClosedGenericDestination.ShouldBe(Converter<int>.ClosedDestinationViaOpenSource);
+            _closedGenericToOpenGenericDestination.ShouldBe(Converter<int>.OpenDestinationViaClosedSource);
         }
 
         [Fact]

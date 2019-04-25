@@ -1,5 +1,5 @@
 ﻿using Xunit;
-using Should;
+using Shouldly;
 using System;
 using System.Collections.Generic;
 
@@ -34,6 +34,12 @@ namespace AutoMapper.UnitTests.Bug
         public void Should_map_IEnumerable_to_ISet()
         {
             _destination.Items.SetEquals(_items).ShouldBeTrue();
+        }
+
+        [Fact]
+        public void Should_map_null_to_empty()
+        {
+            Mapper.Map<Destination>(new Source()).ShouldNotBeNull();
         }
     }
 }

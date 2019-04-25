@@ -1,144 +1,130 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using AutoMapper.Internal;
+
 namespace AutoMapper
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Reflection;
-    using Execution;
+    using static Internal.ExpressionFactory;
+    using static Expression;
 
-    [DebuggerDisplay("{DestinationProperty.Name}")]
-    public class PropertyMap
+    [DebuggerDisplay("{DestinationMember.Name}")]
+    public class PropertyMap : DefaultMemberMap
     {
-        private readonly List<IMemberGetter> _memberChain = new List<IMemberGetter>();
+        private readonly List<MemberInfo> _memberChain = new List<MemberInfo>();
+        private readonly List<ValueTransformerConfiguration> _valueTransformerConfigs = new List<ValueTransformerConfiguration>();
 
-        public PropertyMap(IMemberAccessor destinationProperty, TypeMap typeMap)
+        public PropertyMap(MemberInfo destinationMember, TypeMap typeMap)
         {
             TypeMap = typeMap;
-            UseDestinationValue = true;
-            DestinationProperty = destinationProperty;
+            DestinationMember = destinationMember;
         }
 
         public PropertyMap(PropertyMap inheritedMappedProperty, TypeMap typeMap)
-            : this(inheritedMappedProperty.DestinationProperty, typeMap)
+            : this(inheritedMappedProperty.DestinationMember, typeMap) => ApplyInheritedPropertyMap(inheritedMappedProperty);
+
+        public PropertyMap(PropertyMap includedMemberMap, TypeMap typeMap, LambdaExpression expression) 
+            : this(includedMemberMap, typeMap) => ApplyIncludedMemberMap(includedMemberMap, expression);
+
+        private void ApplyIncludedMemberMap(PropertyMap includedMemberMap, LambdaExpression expression)
         {
-            ApplyInheritedPropertyMap(inheritedMappedProperty);
+            CustomSource = expression;
+            if(includedMemberMap._memberChain.Count > 0)
+            {
+                ChainMembers(expression.Body.GetMembers().Select(e => e.Member).Concat(includedMemberMap._memberChain));
+            }
+            CustomMapExpression = CheckCustomSource(CustomMapExpression);
         }
 
-        public TypeMap TypeMap { get; }
-        public IMemberAccessor DestinationProperty { get; }
+        private LambdaExpression CheckCustomSource(LambdaExpression lambda) => CheckCustomSource(lambda, CustomSource);
 
-        public Type DestinationPropertyType => DestinationProperty.MemberType;
+        public static LambdaExpression CheckCustomSource(LambdaExpression lambda, LambdaExpression customSource) =>
+            (lambda == null || customSource == null) ?
+                lambda :
+                Lambda(lambda.ReplaceParameters(customSource.Body), customSource.Parameters.Concat(lambda.Parameters.Skip(1)));
 
-        public IEnumerable<IMemberGetter> SourceMembers => _memberChain;
+        public override TypeMap TypeMap { get; }
+        public MemberInfo DestinationMember { get; }
+        public override string DestinationName => DestinationMember.Name;
 
-        public bool Ignored { get; set; }
+        public override Type DestinationType => DestinationMember.GetMemberType();
+
+        public override IEnumerable<MemberInfo> SourceMembers => _memberChain;
+        public override LambdaExpression CustomSource { get; set; }
+        public override bool Inline { get; set; } = true;
+        public override bool Ignored { get; set; }
+        public bool AllowNull { get; set; }
         public int? MappingOrder { get; set; }
-        public LambdaExpression CustomResolver { get; set; }
-        public LambdaExpression Condition { get; set; }
-        public LambdaExpression PreCondition { get; set; }
-        public LambdaExpression CustomExpression { get; private set; }
-        public MemberInfo CustomSourceMember { get; set; }
-        public bool UseDestinationValue { get; set; }
+        public override LambdaExpression CustomMapFunction { get; set; }
+        public override LambdaExpression Condition { get; set; }
+        public override LambdaExpression PreCondition { get; set; }
+        public override LambdaExpression CustomMapExpression { get; set; }
+        public override bool UseDestinationValue { get; set; }
         public bool ExplicitExpansion { get; set; }
-        public object CustomValue { get; set; }
-        public object NullSubstitute { get; set; }
-        public ValueResolverConfiguration ValueResolverConfig { get; set; }
+        public override object NullSubstitute { get; set; }
+        public override ValueResolverConfiguration ValueResolverConfig { get; set; }
+        public override ValueConverterConfiguration ValueConverterConfig { get; set; }
+        public override IEnumerable<ValueTransformerConfiguration> ValueTransformers => _valueTransformerConfigs;
 
-        public MemberInfo SourceMember
-        {
-            get
-            {
-                if (CustomSourceMember != null)
-                    return CustomSourceMember;
+        public override Type SourceType => ValueConverterConfig?.SourceMember?.ReturnType
+                                  ?? ValueResolverConfig?.SourceMember?.ReturnType
+                                  ?? CustomMapFunction?.ReturnType
+                                  ?? CustomMapExpression?.ReturnType
+                                  ?? SourceMember?.GetMemberType();
 
-                if (CustomExpression != null)
-                {
-                    var finder = new MemberFinderVisitor();
-                    finder.Visit(CustomExpression);
-
-                    if (finder.Member != null)
-                    {
-                        return finder.Member.Member;
-                    }
-                }
-
-                return _memberChain.LastOrDefault()?.MemberInfo;
-            }
-        }
-
-        public Type SourceType
-        {
-            get
-            {
-                if (CustomExpression != null)
-                    return CustomExpression.ReturnType;
-                if (CustomResolver != null)
-                    return CustomResolver.ReturnType;
-                return SourceMember?.GetMemberType();
-            }
-        }
-
-        public void ChainMembers(IEnumerable<IMemberGetter> members)
-        {
-            var getters = members as IList<IMemberGetter> ?? members.ToList();
-            _memberChain.AddRange(getters);
-        }
+        public void ChainMembers(IEnumerable<MemberInfo> members) =>
+            _memberChain.AddRange(members as IList<MemberInfo> ?? members.ToList());
 
         public void ApplyInheritedPropertyMap(PropertyMap inheritedMappedProperty)
         {
-            if (!CanResolveValue() && inheritedMappedProperty.Ignored)
+            if(inheritedMappedProperty.Ignored && !IsResolveConfigured)
             {
                 Ignored = true;
             }
-            CustomExpression = CustomExpression ?? inheritedMappedProperty.CustomExpression;
-            CustomResolver = CustomResolver ?? inheritedMappedProperty.CustomResolver;
+            CustomMapExpression = CustomMapExpression ?? inheritedMappedProperty.CustomMapExpression;
+            CustomMapFunction = CustomMapFunction ?? inheritedMappedProperty.CustomMapFunction;
             Condition = Condition ?? inheritedMappedProperty.Condition;
             PreCondition = PreCondition ?? inheritedMappedProperty.PreCondition;
             NullSubstitute = NullSubstitute ?? inheritedMappedProperty.NullSubstitute;
             MappingOrder = MappingOrder ?? inheritedMappedProperty.MappingOrder;
-            CustomValue = CustomValue ?? inheritedMappedProperty.CustomValue;
-            CustomSourceMember = CustomSourceMember ?? inheritedMappedProperty.CustomSourceMember;
+            ValueResolverConfig = ValueResolverConfig ?? inheritedMappedProperty.ValueResolverConfig;
+            ValueConverterConfig = ValueConverterConfig ?? inheritedMappedProperty.ValueConverterConfig;
+            _valueTransformerConfigs.InsertRange(0, inheritedMappedProperty._valueTransformerConfigs);
         }
 
-        public bool IsMapped()
-        {
-            return _memberChain.Count > 0 
-                || ValueResolverConfig != null 
-                || CustomResolver != null 
-                || SourceMember != null
-                || CustomValue != null
-                || CustomExpression != null
-                || Ignored;
-        }
+        public override bool CanResolveValue => HasSource && !Ignored;
 
-        public bool CanResolveValue()
-        {
-            return (_memberChain.Count > 0
-                || ValueResolverConfig != null
-                || CustomResolver != null
-                || SourceMember != null
-                || CustomValue != null
-                || CustomExpression != null) && !Ignored;
-        }
+        public bool HasSource => _memberChain.Count > 0 || IsResolveConfigured;
 
-        public void SetCustomValueResolverExpression<TSource, TMember>(Expression<Func<TSource, TMember>> sourceMember)
-        {
-            CustomExpression = sourceMember;
+        public bool IsResolveConfigured => ValueResolverConfig != null || CustomMapFunction != null ||
+                                         CustomMapExpression != null || ValueConverterConfig != null;
 
+        public void MapFrom(LambdaExpression sourceMember)
+        {
+            CustomMapExpression = sourceMember;
             Ignored = false;
         }
 
-        private class MemberFinderVisitor : ExpressionVisitor
+        public void MapFrom(string propertyOrField)
         {
-            public MemberExpression Member { get; private set; }
+            var mapExpression = TypeMap.SourceType.IsGenericTypeDefinition() ?
+                                                // just a placeholder so the member is mapped
+                                                Lambda(Constant(null)) :
+                                                MemberAccessLambda(TypeMap.SourceType, propertyOrField);
+            MapFrom(mapExpression);
+        }
 
-            protected override Expression VisitMember(MemberExpression node)
+        public void AddValueTransformation(ValueTransformerConfiguration valueTransformerConfiguration) =>
+            _valueTransformerConfigs.Add(valueTransformerConfiguration);
+
+        internal void CheckMappedReadonly()
+        {
+            if(IsResolveConfigured && !ReflectionHelper.CanBeSet(DestinationMember))
             {
-                Member = node;
-
-                return base.VisitMember(node);
+                UseDestinationValue = true;
             }
         }
     }

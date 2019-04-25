@@ -1,39 +1,34 @@
-using System.Collections.Concurrent;
+using AutoMapper.Configuration;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace AutoMapper.QueryableExtensions.Impl
 {
-    using System.Linq.Expressions;
+    using static Expression;
 
     public class MappedTypeExpressionBinder : IExpressionBinder
     {
-        public bool IsMatch(PropertyMap propertyMap, TypeMap propertyTypeMap, ExpressionResolutionResult result)
-        {
-            return propertyTypeMap != null && propertyTypeMap.CustomProjection == null;
-        }
+        public bool IsMatch(PropertyMap propertyMap, TypeMap propertyTypeMap, ExpressionResolutionResult result) => 
+            propertyTypeMap != null && propertyTypeMap.CustomMapExpression == null;
 
-        public MemberAssignment Build(IConfigurationProvider configuration, PropertyMap propertyMap, TypeMap propertyTypeMap, ExpressionRequest request, ExpressionResolutionResult result, ConcurrentDictionary<ExpressionRequest, int> typePairCount)
-        {
-            return BindMappedTypeExpression(configuration, propertyMap, request, result, typePairCount);
-        }
+        public MemberAssignment Build(IConfigurationProvider configuration, PropertyMap propertyMap, TypeMap propertyTypeMap, ExpressionRequest request, ExpressionResolutionResult result, IDictionary<ExpressionRequest, int> typePairCount, LetPropertyMaps letPropertyMaps) 
+            => BindMappedTypeExpression(configuration, propertyMap, request, result, typePairCount, letPropertyMaps);
 
-        private static MemberAssignment BindMappedTypeExpression(IConfigurationProvider configuration, PropertyMap propertyMap, ExpressionRequest request, ExpressionResolutionResult result, ConcurrentDictionary<ExpressionRequest, int> typePairCount)
+        private static MemberAssignment BindMappedTypeExpression(IConfigurationProvider configuration, PropertyMap propertyMap, ExpressionRequest request, ExpressionResolutionResult result, IDictionary<ExpressionRequest, int> typePairCount, LetPropertyMaps letPropertyMaps)
         {
-            var transformedExpression = configuration.ExpressionBuilder.CreateMapExpression(request, result.ResolutionExpression, typePairCount);
+            var transformedExpression = configuration.ExpressionBuilder.CreateMapExpression(request, result.ResolutionExpression, typePairCount, letPropertyMaps);
             if(transformedExpression == null)
             {
                 return null;
             }
-            // Handles null source property so it will not create an object with possible non-nullable propeerties 
+            // Handles null source property so it will not create an object with possible non-nullable properties 
             // which would result in an exception.
-            if (configuration.AllowNullDestinationValues)
+            if (propertyMap.TypeMap.Profile.AllowNullDestinationValues && !propertyMap.AllowNull && !(result.ResolutionExpression is ParameterExpression) && !result.ResolutionExpression.Type.IsCollectionType())
             {
-                var expressionNull = Expression.Constant(null, propertyMap.DestinationPropertyType);
-                transformedExpression =
-                    Expression.Condition(Expression.NotEqual(result.ResolutionExpression, Expression.Constant(null)),
-                        transformedExpression, expressionNull);
+                transformedExpression = result.ResolutionExpression.IfNullElse(Constant(null, transformedExpression.Type), transformedExpression);
             }
 
-            return Expression.Bind(propertyMap.DestinationProperty.MemberInfo, transformedExpression);
+            return Bind(propertyMap.DestinationMember, transformedExpression);
         }
     }
 }

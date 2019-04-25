@@ -1,34 +1,30 @@
-using System.Linq;
+using System;
 using System.Linq.Expressions;
-using System.Reflection;
+using AutoMapper.Configuration;
+using AutoMapper.Execution;
 
 namespace AutoMapper.Mappers
 {
-    using Configuration;
+    using static Expression;
 
-    public class NullableSourceMapper : IObjectMapExpression
+    public class NullableSourceMapper : IObjectMapperInfo
     {
-        public static TDestination Map<TDestination>(TDestination? source)
-            where TDestination : struct
-        {
-            return source.GetValueOrDefault();
-        }
+        public bool IsMatch(TypePair context) => context.SourceType.IsNullableType();
 
-        private static readonly MethodInfo MapMethodInfo = typeof(NullableSourceMapper).GetAllMethods().First(_ => _.IsStatic);
+        public Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression,
+            Expression contextExpression) =>
+                ExpressionBuilder.MapExpression(configurationProvider, profileMap,
+                    new TypePair(Nullable.GetUnderlyingType(sourceExpression.Type), destExpression.Type),
+                    Property(sourceExpression, sourceExpression.Type.GetDeclaredProperty("Value")),
+                    contextExpression,
+                    memberMap,
+                    destExpression
+                );
 
-        public object Map(ResolutionContext context)
+        public TypePair GetAssociatedTypes(TypePair initialTypes)
         {
-            return MapMethodInfo.MakeGenericMethod(context.DestinationType).Invoke(null, new [] {context.SourceValue});
-        }
-
-        public bool IsMatch(TypePair context)
-        {
-            return context.SourceType.IsNullableType() && !context.DestinationType.IsNullableType() && context.DestinationType == context.SourceType.GetTypeOfNullable();
-        }
-
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
-        {
-            return Expression.Call(null, MapMethodInfo.MakeGenericMethod(destExpression.Type), sourceExpression);
+            return new TypePair(Nullable.GetUnderlyingType(initialTypes.SourceType), initialTypes.DestinationType);
         }
     }
 }

@@ -1,66 +1,58 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using AutoMapper.Configuration;
+using AutoMapper.Internal;
+using AutoMapper.Mappers.Internal;
 
 namespace AutoMapper.Mappers
 {
-    using System;
-    using System.Reflection;
-    using Configuration;
+    using static Expression;
+    using static ExpressionFactory;
+    using static CollectionMapperExpressionFactory;
 
-    public class ArrayMapper : IObjectMapExpression
+    public class ArrayMapper : EnumerableMapperBase
     {
-        public static TDestination Map<TDestination,TSource, TSourceElement>(TSource source, ResolutionContext context)
-            where TSource : IEnumerable
-            where TDestination : class
+        public override bool IsMatch(TypePair context) => context.DestinationType.IsArray && context.SourceType.IsEnumerableType();
+
+        public override Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression, Expression contextExpression)
         {
-            if (source == null && context.Mapper.ShouldMapSourceCollectionAsNull(context))
-                return null;
-            
-            var destElementType = TypeHelper.GetElementType(typeof (TDestination));
+            var sourceElementType = ElementTypeHelper.GetElementType(sourceExpression.Type);
+            var destElementType = ElementTypeHelper.GetElementType(destExpression.Type);
 
-            if (!context.IsSourceValueNull && context.DestinationType.IsAssignableFrom(context.SourceType))
-            {
-                var elementTypeMap = context.ConfigurationProvider.ResolveTypeMap(typeof(TSourceElement), destElementType);
-                if (elementTypeMap == null)
-                    return source as TDestination;
-            }
+            var itemExpr = MapItemExpr(configurationProvider, profileMap, sourceExpression.Type, destExpression.Type, contextExpression, out ParameterExpression itemParam);
 
-            IEnumerable sourceList = source;
-            if (sourceList == null)
-                sourceList = typeof(TSource).GetTypeInfo().IsInterface ?
-                new List<TSourceElement>() :
-                (IEnumerable<TSourceElement>)(context.ConfigurationProvider.AllowNullDestinationValues
-                ? ObjectCreator.CreateNonNullValue(typeof(TSource))
-                : ObjectCreator.CreateObject(typeof(TSource)));
+            //var count = source.Count();
+            //var array = new TDestination[count];
 
-            var sourceLength = sourceList.OfType<object>().Count();
-            Array array = ObjectCreator.CreateArray(destElementType, sourceLength);
-            int count = 0;
-            var itemContext = new ResolutionContext(context);
-            foreach(var item in sourceList)
-            {
-                array.SetValue(itemContext.Map(item, null, typeof(TSourceElement), destElementType), count++);
-            }
-            return array as TDestination;
-        }
+            //int i = 0;
+            //foreach (var item in source)
+            //    array[i++] = newItemFunc(item, context);
+            //return array;
 
-        private static readonly MethodInfo MapMethodInfo = typeof(ArrayMapper).GetAllMethods().First(_ => _.IsStatic);
+            var countParam = Parameter(typeof(int), "count");
+            var arrayParam = Parameter(destExpression.Type, "destinationArray");
+            var indexParam = Parameter(typeof(int), "destinationArrayIndex");
 
-        public object Map(ResolutionContext context)
-        {
-            return MapMethodInfo.MakeGenericMethod(context.DestinationType, context.SourceType, TypeHelper.GetElementType(context.SourceType, (IEnumerable)context.SourceValue)).Invoke(null, new [] { context.SourceValue, context });
-        }
+            var actions = new List<Expression>();
+            var parameters = new List<ParameterExpression> { countParam, arrayParam, indexParam };
 
-        public bool IsMatch(TypePair context)
-        {
-            return (context.DestinationType.IsArray) && (context.SourceType.IsEnumerableType());
-        }
+            var countMethod = typeof(Enumerable)
+                .GetTypeInfo()
+                .DeclaredMethods
+                .Single(mi => mi.Name == "Count" && mi.GetParameters().Length == 1)
+                .MakeGenericMethod(sourceElementType);
+            actions.Add(Assign(countParam, Call(countMethod, sourceExpression)));
+            actions.Add(Assign(arrayParam, NewArrayBounds(destElementType, countParam)));
+            actions.Add(Assign(indexParam, Constant(0)));
+            actions.Add(ForEach(sourceExpression, itemParam,
+                Assign(ArrayAccess(arrayParam, PostIncrementAssign(indexParam)), itemExpr)
+                ));
+            actions.Add(arrayParam);
 
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
-        {
-            return Expression.Call(null, MapMethodInfo.MakeGenericMethod(destExpression.Type, sourceExpression.Type, TypeHelper.GetElementType(sourceExpression.Type)), sourceExpression, contextExpression );
+            return Block(parameters, actions);
         }
     }
 }

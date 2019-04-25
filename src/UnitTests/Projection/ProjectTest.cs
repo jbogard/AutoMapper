@@ -1,17 +1,41 @@
 ﻿﻿using Xunit;
-﻿using Should;
+﻿using Shouldly;
 
 namespace AutoMapper.UnitTests.Projection
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Linq;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
 
-	using AutoMapper;
-	using QueryableExtensions;
+    using AutoMapper;
+    using QueryableExtensions;
+
+    public class ProjectWithFields : AutoMapperSpecBase
+    {
+        public class Foo
+        {
+            public int A;
+        }
+
+        public class FooDto
+        {
+            public int A;
+        }
+
+        protected override MapperConfiguration Configuration => new MapperConfiguration(cfg =>
+        {
+            cfg.CreateMap<Foo, FooDto>();
+        });
+
+        [Fact]
+        public void Should_work()
+        {
+            new[] { new Foo() }.AsQueryable().ProjectTo<FooDto>(Configuration).Single().A.ShouldBe(0);
+        } 
+    }
 
     public class ProjectTest
-	{
+    {
         private MapperConfiguration _config;
 
         public ProjectTest()
@@ -20,67 +44,58 @@ namespace AutoMapper.UnitTests.Projection
             {
                 cfg.CreateMap<Address, AddressDto>();
                 cfg.CreateMap<Customer, CustomerDto>();
+                cfg.CreateMissingTypeMaps = false;
             });
         }
 
-        [Fact(Skip = "EF doesn't support null values in expressions")]
-		public void SelectUsingProjectToWithNullComplexSourceProperty()
-		{
-			var customers = new[] { new Customer { FirstName = "Bill", LastName = "White" } }.AsQueryable();
+        [Fact]
+        public void ProjectToWithUnmappedTypeShouldThrowException()
+        {
+            var customers =
+                new[] { new Customer { FirstName = "Bill", LastName = "White", Address = new Address("Street1") } }
+                    .AsQueryable();
 
-			var projected = customers.ProjectTo<CustomerDto>(_config).SingleOrDefault();
-			projected.ShouldNotBeNull();
-			projected.Address.ShouldBeNull();
-		}
-
-		[Fact]
-		public void ProjectToWithUnmappedTypeShouldThrowException()
-		{
-			var customers =
-				new[] { new Customer { FirstName = "Bill", LastName = "White", Address = new Address("Street1") } }
-					.AsQueryable();
-
-			IList<Unmapped> projected = null;
+            IList<Unmapped> projected = null;
 
             typeof(InvalidOperationException).ShouldBeThrownBy(() => projected = customers.ProjectTo<Unmapped>(_config).ToList());
 
-			projected.ShouldBeNull();
-		}
+            projected.ShouldBeNull();
+        }
 
-		public class Customer
-		{
-			public string FirstName { get; set; }
+        public class Customer
+        {
+            public string FirstName { get; set; }
 
-			public string LastName { get; set; }
+            public string LastName { get; set; }
 
-			public Address Address { get; set; }
-		}
+            public Address Address { get; set; }
+        }
 
-		public class Address
-		{
-			public Address(string street)
-			{
-				Street = street;
-			}
+        public class Address
+        {
+            public Address(string street)
+            {
+                Street = street;
+            }
 
-			public string Street { get; set; }
-		}
+            public string Street { get; set; }
+        }
 
-		public class CustomerDto
-		{
-			public string FirstName { get; set; }
+        public class CustomerDto
+        {
+            public string FirstName { get; set; }
 
-			public AddressDto Address { get; set; }
-		}
+            public AddressDto Address { get; set; }
+        }
 
-		public class AddressDto
-		{
-			public string Street { get; set; }
-		}
+        public class AddressDto
+        {
+            public string Street { get; set; }
+        }
 
-		public class Unmapped
-		{
-			public string FirstName { get; set; }
-		}
-	}
+        public class Unmapped
+        {
+            public string FirstName { get; set; }
+        }
+    }
 }

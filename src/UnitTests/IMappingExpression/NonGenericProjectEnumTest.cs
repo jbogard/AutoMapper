@@ -1,9 +1,10 @@
-﻿namespace AutoMapper.UnitTests.Projection
+﻿using System;
+
+namespace AutoMapper.UnitTests.Projection
 {
     using QueryableExtensions;
-    using Should;
+    using Shouldly;
     using System.Linq;
-    using Should.Core.Assertions;
     using Xunit;
 
     public class NonGenericProjectEnumTest
@@ -15,7 +16,7 @@
             _config = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap(typeof(Customer), typeof(CustomerDto));
-                cfg.CreateMap(typeof(CustomerType), typeof(string)).ProjectUsing(ct => ct.ToString().ToUpper());
+                cfg.CreateMap(typeof(CustomerType), typeof(string)).ConvertUsing(ct => ct.ToString().ToUpper());
             });
         }
 
@@ -26,7 +27,7 @@
 
             var projected = customers.ProjectTo<CustomerDto>(_config);
             projected.ShouldNotBeNull();
-            Assert.Equal(customers.Single().CustomerType.ToString().ToUpper(), projected.Single().CustomerType);
+            customers.Single().CustomerType.ToString().ToUpper().ShouldBe(projected.Single().CustomerType);
         }
 
         public class Customer
@@ -63,7 +64,7 @@
             var config = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap(typeof (Customer), typeof (CustomerDto));
-                cfg.CreateMap(typeof (CustomerType), typeof (string)).ProjectUsing(ct => ct.ToString().ToUpper());
+                cfg.CreateMap(typeof (CustomerType), typeof (string)).ConvertUsing(ct => ct.ToString().ToUpper());
             });
             _mapper = config.CreateMapper();
         }
@@ -75,7 +76,7 @@
 
             var projected = customers.ProjectTo<CustomerDto>(_mapper.ConfigurationProvider);
             projected.ShouldNotBeNull();
-            Assert.Equal(customers.Single().CustomerType.ToString().ToUpper(), projected.Single().CustomerType);
+            Assert.Equal(customers.Single().CustomerType.ToString(), projected.Single().CustomerType, StringComparer.OrdinalIgnoreCase);
         }
 
         public class Customer
@@ -117,7 +118,7 @@
 
         protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
         {
-            cfg.CreateMap(typeof (Source), typeof (Dest)).ProjectUsing(src => new Dest {Value = 10});
+            cfg.CreateMap(typeof (Source), typeof (Dest)).ConvertUsing(src => new Dest {Value = 10});
         });
 
         [Fact]

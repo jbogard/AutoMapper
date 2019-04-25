@@ -1,19 +1,11 @@
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace AutoMapper.Mappers
 {
-    using System.Linq;
-    using System.Reflection;
-
-    public class ExplicitConversionOperatorMapper : IObjectMapExpression
+    public class ExplicitConversionOperatorMapper : IObjectMapper
     {
-        public object Map(ResolutionContext context)
-        {
-            var implicitOperator = GetExplicitConversionOperator(context.Types);
-
-            return implicitOperator.Invoke(null, new[] {context.SourceValue});
-        }
-
         public bool IsMatch(TypePair context)
         {
             var methodInfo = GetExplicitConversionOperator(context);
@@ -29,12 +21,13 @@ namespace AutoMapper.Mappers
                 .Where(mi => mi.Name == "op_Explicit")
                 .FirstOrDefault(mi => mi.ReturnType == context.DestinationType);
 
-            var destTypeMethod = context.DestinationType.GetMethod("op_Explicit", new[] {context.SourceType});
+            var destTypeMethod = context.DestinationType.GetDeclaredMethod("op_Explicit", new[] {context.SourceType});
 
             return sourceTypeMethod ?? destTypeMethod;
         }
 
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        public Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression, Expression contextExpression)
         {
             var implicitOperator = GetExplicitConversionOperator(new TypePair(sourceExpression.Type, destExpression.Type));
             return Expression.Call(null, implicitOperator, sourceExpression);

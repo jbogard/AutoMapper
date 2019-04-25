@@ -1,14 +1,14 @@
-﻿using AutoMapper.QueryableExtensions;
-using AutoMapper.QueryableExtensions.Impl;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using AutoMapper.Execution;
+using AutoMapper.QueryableExtensions;
+using AutoMapper.QueryableExtensions.Impl;
 
 namespace AutoMapper
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Reflection;
-    using Execution;
     using static Expression;
 
     public class ConstructorMap
@@ -17,7 +17,7 @@ namespace AutoMapper
 
         public ConstructorInfo Ctor { get; }
         public TypeMap TypeMap { get; }
-        internal IEnumerable<ConstructorParameterMap> CtorParams => _ctorParams;
+        public IEnumerable<ConstructorParameterMap> CtorParams => _ctorParams;
 
         public ConstructorMap(ConstructorInfo ctor, TypeMap typeMap)
         {
@@ -28,10 +28,10 @@ namespace AutoMapper
         private static readonly IExpressionResultConverter[] ExpressionResultConverters =
         {
             new MemberResolverExpressionResultConverter(),
-            new MemberGetterExpressionResultConverter(),
+            new MemberGetterExpressionResultConverter()
         };
 
-        public bool CanResolve => CtorParams.All(param => param.CanResolve);
+        public bool CanResolve => CtorParams.All(param => param.CanResolveValue);
 
         public Expression NewExpression(Expression instanceParameter)
         {
@@ -42,44 +42,17 @@ namespace AutoMapper
                 var matchingExpressionConverter =
                     ExpressionResultConverters.FirstOrDefault(c => c.CanGetExpressionResolutionResult(result, map));
 
-                if (matchingExpressionConverter == null)
-                    throw new Exception("Can't resolve this to Queryable Expression");
-
-                result = matchingExpressionConverter.GetExpressionResolutionResult(result, map);
+                result = matchingExpressionConverter?.GetExpressionResolutionResult(result, map)
+                    ?? throw new AutoMapperMappingException($"Unable to generate the instantiation expression for the constructor {Ctor}: no expression could be mapped for constructor parameter '{map.Parameter}'.", null, TypeMap.Types);
 
                 return result;
             });
             return New(Ctor, parameters.Select(p => p.ResolutionExpression));
         }
 
-        public Expression BuildExpression(
-            TypeMapRegistry typeMapRegistry,
-            ParameterExpression srcParam, 
-            ParameterExpression ctxtParam)
+        public void AddParameter(ParameterInfo parameter, MemberInfo[] resolvers, bool canResolve)
         {
-            if (!CanResolve)
-                return null;
-
-            ParameterExpression parameterContext = null;
-            var ctorArgs = CtorParams.Select(p => p.CreateExpression(typeMapRegistry, srcParam, ctxtParam, ref parameterContext));
-
-            ctorArgs =
-                ctorArgs.Zip(Ctor.GetParameters(),
-                    (exp, pi) => exp.Type == pi.ParameterType ? exp : Convert(exp, pi.ParameterType))
-                    .ToArray();
-
-            var newExpr = New(Ctor, ctorArgs);
-            if(parameterContext == null)
-            {
-                return newExpr;
-            }
-            var mapExpression = Invoke(Lambda(Block(new[] { parameterContext }, TypeMapPlanBuilder.CreatePropertyContext(parameterContext, ctxtParam), newExpr)));
-            return mapExpression;
-        }
-
-        public void AddParameter(ParameterInfo parameter, IMemberGetter[] resolvers, bool canResolve)
-        {
-            _ctorParams.Add(new ConstructorParameterMap(parameter, resolvers, canResolve));
+            _ctorParams.Add(new ConstructorParameterMap(TypeMap, parameter, resolvers, canResolve));
         }
     }
 }

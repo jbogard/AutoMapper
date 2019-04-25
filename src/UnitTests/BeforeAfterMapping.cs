@@ -1,5 +1,5 @@
 using System;
-using Should;
+using Shouldly;
 using Xunit;
 
 namespace AutoMapper.UnitTests.BeforeAfterMapping
@@ -24,6 +24,30 @@ namespace AutoMapper.UnitTests.BeforeAfterMapping
             var config = new MapperConfiguration(cfg => cfg.CreateMap<Source, Destination>()
                 .BeforeMap((src, dest) => beforeMapCalled = true)
                 .AfterMap((src, dest) => afterMapCalled = true));
+
+            var mapper = config.CreateMapper();
+
+            mapper.Map<Source, Destination>(new Source());
+
+            beforeMapCalled.ShouldBeTrue();
+            afterMapCalled.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void Before_and_After_overrides_should_be_called()
+        {
+            var beforeMapCalled = false;
+            var afterMapCalled = false;
+
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Source, Destination>();
+                cfg.ForAllMaps((map, expression) =>
+                {
+                    expression.BeforeMap((src, dest, context) => beforeMapCalled = true);
+                    expression.AfterMap((src, dest, context) => afterMapCalled = true);
+                });
+            });
 
             var mapper = config.CreateMapper();
 
@@ -63,76 +87,102 @@ namespace AutoMapper.UnitTests.BeforeAfterMapping
 
             mapper.Map<Source, Destination>(new Source());
 
-            beforeMapCount.ShouldEqual(2);
-            afterMapCount.ShouldEqual(2);
+            beforeMapCount.ShouldBe(2);
+            afterMapCount.ShouldBe(2);
+        }
+
+        [Fact]
+        public void Before_and_After_overrides_should_be_called()
+        {
+            var beforeMapCount = 0;
+            var afterMapCount = 0;
+
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Source, Destination>();
+                cfg.ForAllMaps((map, expression) =>
+                {
+                    expression.BeforeMap((src, dest, context) => beforeMapCount++)
+                        .BeforeMap((src, dest, context) => beforeMapCount++);
+                    expression.AfterMap((src, dest, context) => afterMapCount++)
+                        .AfterMap((src, dest, context) => afterMapCount++);
+                });
+            });
+
+            var mapper = config.CreateMapper();
+
+            mapper.Map<Source, Destination>(new Source());
+
+            beforeMapCount.ShouldBe(2);
+            afterMapCount.ShouldBe(2);
         }
 
     }
 
-	public class When_using_a_class_to_do_before_after_mappings : AutoMapperSpecBase
-	{
-		private Destination _destination;
+    public class When_using_a_class_to_do_before_after_mappings : AutoMapperSpecBase
+    {
+        private Destination _destination;
 
-		public class Source
-		{
-			public int Value { get; set; }
-		}
+        public class Source
+        {
+            public int Value { get; set; }
+        }
 
-		public class Destination
-		{
-			public int Value { get; set; }
-		}
+        public class Destination
+        {
+            public int Value { get; set; }
+        }
 
-		public class BeforeMapAction : IMappingAction<Source, Destination>
-		{
-			private readonly int _decrement;
+        public class BeforeMapAction : IMappingAction<Source, Destination>
+        {
+            private readonly int _decrement;
 
-			public BeforeMapAction(int decrement)
-			{
-				_decrement = decrement;
-			}
+            public BeforeMapAction(int decrement)
+            {
+                _decrement = decrement;
+            }
 
-			public void Process(Source source, Destination destination)
-			{
-				source.Value -= _decrement * 2;
-			}
-		}
+            public void Process(Source source, Destination destination)
+            {
+                source.Value -= _decrement * 2;
+            }
+        }
 
-		public class AfterMapAction : IMappingAction<Source, Destination>
-		{
-			private readonly int _increment;
+        public class AfterMapAction : IMappingAction<Source, Destination>
+        {
+            private readonly int _increment;
 
-			public AfterMapAction(int increment)
-			{
-				_increment = increment;
-			}
+            public AfterMapAction(int increment)
+            {
+                _increment = increment;
+            }
 
-			public void Process(Source source, Destination destination)
-			{
-				destination.Value += _increment * 5;
-			}
-		}
+            public void Process(Source source, Destination destination)
+            {
+                destination.Value += _increment * 5;
+            }
+        }
 
-	    protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
-	    {
-	        cfg.ConstructServicesUsing(t => Activator.CreateInstance(t, 2));
+        protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
+        {
+            cfg.ConstructServicesUsing(t => Activator.CreateInstance(t, 2));
 
-	        cfg.CreateMap<Source, Destination>()
-	            .BeforeMap<BeforeMapAction>()
-	            .AfterMap<AfterMapAction>();
-	    });
+            cfg.CreateMap<Source, Destination>()
+                .BeforeMap<BeforeMapAction>()
+                .AfterMap<AfterMapAction>();
+        });
 
-		protected override void Because_of()
-		{
-			_destination = Mapper.Map<Source, Destination>(new Source {Value = 4});
-		}
+        protected override void Because_of()
+        {
+            _destination = Mapper.Map<Source, Destination>(new Source {Value = 4});
+        }
 
-		[Fact]
-		public void Should_use_global_constructor_for_building_mapping_actions()
-		{
-			_destination.Value.ShouldEqual(10);
-		}
-	}
+        [Fact]
+        public void Should_use_global_constructor_for_building_mapping_actions()
+        {
+            _destination.Value.ShouldBe(10);
+        }
+    }
 
     public class MappingSpecificBeforeMapping : AutoMapperSpecBase
     {
@@ -166,7 +216,7 @@ namespace AutoMapper.UnitTests.BeforeAfterMapping
         [Fact]
         public void Should_execute_typemap_and_scoped_beforemap()
         {
-            _dest.Value.ShouldEqual(25);
+            _dest.Value.ShouldBe(25);
         }
     }
 
@@ -202,7 +252,7 @@ namespace AutoMapper.UnitTests.BeforeAfterMapping
         [Fact]
         public void Should_execute_typemap_and_scoped_aftermap()
         {
-            _dest.Value.ShouldEqual(25);
+            _dest.Value.ShouldBe(25);
         }
     }
 

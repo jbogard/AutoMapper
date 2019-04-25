@@ -1,46 +1,48 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using AutoMapper.Features;
+using AutoMapper.Mappers;
+
 namespace AutoMapper.Configuration
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Reflection;
-    using Mappers;
-
-    public class MapperConfigurationExpression : IMapperConfigurationExpression
+    public class MapperConfigurationExpression : Profile, IMapperConfigurationExpression, IConfiguration
     {
-        private readonly Profile _defaultProfile;
         private readonly IList<Profile> _profiles = new List<Profile>();
-        private readonly List<Action<TypeMap, IMappingExpression>> _allTypeMapActions = new List<Action<TypeMap, IMappingExpression>>();
 
-        public MapperConfigurationExpression()
+        public MapperConfigurationExpression() : base()
         {
-            _defaultProfile = new NamedProfile(ProfileName);
-            _profiles.Add(_defaultProfile);
+            IncludeSourceExtensionMethods(typeof(Enumerable));
+
+            Mappers = MapperRegistry.Mappers();
         }
 
-        public string ProfileName => "";
-        public IEnumerable<Profile> Profiles => _profiles;
-        public IEnumerable<Action<TypeMap, IMappingExpression>> AllTypeMapActions => _allTypeMapActions;
-        public Func<Type, object> ServiceCtor { get; private set; } = ObjectCreator.CreateObject;
+        public IEnumerable<IProfileConfiguration> Profiles => _profiles;
+        public Func<Type, object> ServiceCtor { get; private set; } = Activator.CreateInstance;
 
-        public void CreateProfile(string profileName, Action<Profile> config)
-        {
-            var profile = new NamedProfile(profileName);
+        public void CreateProfile(string profileName, Action<IProfileExpression> config)
+            => AddProfile(new NamedProfile(profileName, config));
 
-            config(profile);
+        public IList<IObjectMapper> Mappers { get; }
 
-            AddProfile(profile);
-        }
+        public AdvancedConfiguration Advanced { get; } = new AdvancedConfiguration();
+
+        public Features<IGlobalFeature> Features { get; } = new Features<IGlobalFeature>();
 
         private class NamedProfile : Profile
         {
             public NamedProfile(string profileName) : base(profileName)
             {
             }
+
+            public NamedProfile(string profileName, Action<IProfileExpression> config) : base(profileName, config)
+            {
+            }
         }
 
         public void AddProfile(Profile profile)
         {
-            profile.Initialize();
             _profiles.Add(profile);
         }
 
@@ -48,98 +50,81 @@ namespace AutoMapper.Configuration
 
         public void AddProfile(Type profileType) => AddProfile((Profile)Activator.CreateInstance(profileType));
 
+        public void AddProfiles(IEnumerable<Assembly> assembliesToScan)
+            => AddMaps(assembliesToScan);
+
+        public void AddProfiles(params Assembly[] assembliesToScan)
+            => AddMaps(assembliesToScan);
+
+        public void AddProfiles(IEnumerable<string> assemblyNamesToScan)
+            => AddMaps(assemblyNamesToScan);
+
+        public void AddProfiles(params string[] assemblyNamesToScan)
+            => AddMaps(assemblyNamesToScan);
+
+        public void AddProfiles(IEnumerable<Type> typesFromAssembliesContainingProfiles)
+            => AddMaps(typesFromAssembliesContainingProfiles);
+
+        public void AddProfiles(params Type[] typesFromAssembliesContainingProfiles)
+            => AddMaps(typesFromAssembliesContainingProfiles);
+
+        public void AddProfiles(IEnumerable<Profile> enumerableOfProfiles)
+        {
+            foreach (var profile in enumerableOfProfiles)
+            {
+                AddProfile(profile);
+            }
+        }
+
+        public void AddMaps(IEnumerable<Assembly> assembliesToScan)
+            => AddMapsCore(assembliesToScan);
+
+        public void AddMaps(params Assembly[] assembliesToScan)
+            => AddMapsCore(assembliesToScan);
+
+        public void AddMaps(IEnumerable<string> assemblyNamesToScan)
+            => AddMapsCore(assemblyNamesToScan.Select(Assembly.Load));
+
+        public void AddMaps(params string[] assemblyNamesToScan)
+            => AddMaps((IEnumerable<string>)assemblyNamesToScan);
+
+        public void AddMaps(IEnumerable<Type> typesFromAssembliesContainingMappingDefinitions)
+            => AddMapsCore(typesFromAssembliesContainingMappingDefinitions.Select(t => t.GetTypeInfo().Assembly));
+
+        public void AddMaps(params Type[] typesFromAssembliesContainingMappingDefinitions)
+            => AddMaps((IEnumerable<Type>)typesFromAssembliesContainingMappingDefinitions);
+
+        private void AddMapsCore(IEnumerable<Assembly> assembliesToScan)
+        {
+            var allTypes = assembliesToScan.Where(a => !a.IsDynamic && a != typeof(NamedProfile).Assembly).SelectMany(a => a.GetDefinedTypes()).ToArray();
+            var autoMapAttributeProfile = new NamedProfile(nameof(AutoMapAttribute));
+
+            foreach (var type in allTypes)
+            {
+                if (typeof(Profile).IsAssignableFrom(type) && !type.IsAbstract)
+                {
+                    AddProfile(type.AsType());
+                }
+
+                var autoMapAttribute = type.GetCustomAttribute<AutoMapAttribute>();
+                if (autoMapAttribute != null)
+                {
+                    var mappingExpression = (MappingExpression) autoMapAttributeProfile.CreateMap(autoMapAttribute.SourceType, type);
+                    autoMapAttribute.ApplyConfiguration(mappingExpression);
+
+                    foreach (var memberInfo in type.GetMembers(BindingFlags.Public | BindingFlags.Instance))
+                    {
+                        foreach (var memberConfigurationProvider in memberInfo.GetCustomAttributes().OfType<IMemberConfigurationProvider>())
+                        {
+                            mappingExpression.ForMember(memberInfo, cfg => memberConfigurationProvider.ApplyConfiguration(cfg));
+                        }
+                    }
+                }
+            }
+
+            AddProfile(autoMapAttributeProfile);
+        }
+
         public void ConstructServicesUsing(Func<Type, object> constructor) => ServiceCtor = constructor;
-
-        public Func<PropertyInfo, bool> ShouldMapProperty
-        {
-            get { return _defaultProfile.ShouldMapProperty; }
-            set { _defaultProfile.ShouldMapProperty = value; }
-        }
-
-        public Func<FieldInfo, bool> ShouldMapField
-        {
-            get { return _defaultProfile.ShouldMapField; }
-            set { _defaultProfile.ShouldMapField = value; }
-        }
-
-        public bool CreateMissingTypeMaps
-        {
-            get { return _defaultProfile.CreateMissingTypeMaps; }
-            set { _defaultProfile.CreateMissingTypeMaps = value; }
-        }
-
-        public void IncludeSourceExtensionMethods(Type type) => _defaultProfile.IncludeSourceExtensionMethods(type);
-
-        public INamingConvention SourceMemberNamingConvention
-        {
-            get { return _defaultProfile.SourceMemberNamingConvention; }
-            set { _defaultProfile.SourceMemberNamingConvention = value; }
-        }
-
-        public INamingConvention DestinationMemberNamingConvention
-        {
-            get { return _defaultProfile.DestinationMemberNamingConvention; }
-            set { _defaultProfile.DestinationMemberNamingConvention = value; }
-        }
-
-        public bool AllowNullDestinationValues
-        {
-            get { return _defaultProfile.AllowNullDestinationValues; }
-            set { _defaultProfile.AllowNullDestinationValues = value; }
-        }
-
-        public bool AllowNullCollections
-        {
-            get { return _defaultProfile.AllowNullCollections; }
-            set { _defaultProfile.AllowNullCollections = value; }
-        }
-
-        public void ForAllMaps(Action<TypeMap, IMappingExpression> configuration)
-            => _allTypeMapActions.Add(configuration);
-
-        public Conventions.IMemberConfiguration AddMemberConfiguration()
-            => _defaultProfile.AddMemberConfiguration();
-
-        public IConditionalObjectMapper AddConditionalObjectMapper()
-            => _defaultProfile.AddConditionalObjectMapper();
-
-        public void DisableConstructorMapping() => _defaultProfile.DisableConstructorMapping();
-
-        public IMappingExpression<TSource, TDestination> CreateMap<TSource, TDestination>()
-            => _defaultProfile.CreateMap<TSource, TDestination>();
-
-        public IMappingExpression<TSource, TDestination> CreateMap<TSource, TDestination>(
-            MemberList memberList)
-            => _defaultProfile.CreateMap<TSource, TDestination>(memberList);
-
-        public IMappingExpression CreateMap(Type sourceType, Type destinationType)
-            => _defaultProfile.CreateMap(sourceType, destinationType, MemberList.Destination);
-
-        public IMappingExpression CreateMap(Type sourceType, Type destinationType, MemberList memberList)
-            => _defaultProfile.CreateMap(sourceType, destinationType, memberList);
-
-        public void ClearPrefixes() => _defaultProfile.ClearPrefixes();
-
-        public void RecognizeAlias(string original, string alias)
-            => _defaultProfile.RecognizeAlias(original, alias);
-
-        public void ReplaceMemberName(string original, string newValue)
-            => _defaultProfile.ReplaceMemberName(original, newValue);
-
-        public void RecognizePrefixes(params string[] prefixes)
-            => _defaultProfile.RecognizePrefixes(prefixes);
-
-        public void RecognizePostfixes(params string[] postfixes)
-            => _defaultProfile.RecognizePostfixes(postfixes);
-
-        public void RecognizeDestinationPrefixes(params string[] prefixes)
-            => _defaultProfile.RecognizeDestinationPrefixes(prefixes);
-
-        public void RecognizeDestinationPostfixes(params string[] postfixes)
-            => _defaultProfile.RecognizeDestinationPostfixes(postfixes);
-
-        public void AddGlobalIgnore(string startingwith)
-            => _defaultProfile.AddGlobalIgnore(startingwith);
-
     }
 }

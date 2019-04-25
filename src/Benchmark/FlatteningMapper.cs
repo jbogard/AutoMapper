@@ -1,19 +1,358 @@
 using System;
 using AutoMapper;
 
+
 namespace Benchmark.Flattening
 {
+    using System.Collections.Generic;
+    using System.Linq;
+
+    public class DeepTypeMapper : IObjectToObjectMapper
+    {
+        private Customer _customer;
+        private IMapper _mapper;
+        public string Name { get; } = "Deep Types";
+        public void Initialize()
+        {
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Address, Address>();
+                cfg.CreateMap<Address, AddressDTO>();
+                cfg.CreateMap<Customer, CustomerDTO>();
+            });
+            config.AssertConfigurationIsValid();
+            _mapper = config.CreateMapper();
+            _customer = new Customer()
+            {
+                Address = new Address() { City = "istanbul", Country = "turkey", Id = 1, Street = "istiklal cad." },
+                HomeAddress = new Address() { City = "istanbul", Country = "turkey", Id = 2, Street = "istiklal cad." },
+                Id = 1,
+                Name = "Eduardo Najera",
+                Credit = 234.7m,
+                WorkAddresses = new List<Address>()
+                {
+                    new Address() {City = "istanbul", Country = "turkey", Id = 5, Street = "istiklal cad."},
+                    new Address() {City = "izmir", Country = "turkey", Id = 6, Street = "konak"}
+                },
+                Addresses = new List<Address>()
+                {
+                    new Address() {City = "istanbul", Country = "turkey", Id = 3, Street = "istiklal cad."},
+                    new Address() {City = "izmir", Country = "turkey", Id = 4, Street = "konak"}
+                }.ToArray()
+            };
+        }
+
+        public object Map()
+        {
+            return _mapper.Map<Customer, CustomerDTO>(_customer);
+        }
+
+        public class Address
+        {
+            public int Id { get; set; }
+            public string Street { get; set; }
+            public string City { get; set; }
+            public string Country { get; set; }
+        }
+
+        public class AddressDTO
+        {
+            public int Id { get; set; }
+            public string City { get; set; }
+            public string Country { get; set; }
+        }
+
+        public class Customer
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public decimal? Credit { get; set; }
+            public Address Address { get; set; }
+            public Address HomeAddress { get; set; }
+            public Address[] Addresses { get; set; }
+            public List<Address> WorkAddresses { get; set; }
+        }
+
+        public class CustomerDTO
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public Address Address { get; set; }
+            public AddressDTO HomeAddress { get; set; }
+            public AddressDTO[] Addresses { get; set; }
+            public List<AddressDTO> WorkAddresses { get; set; }
+            public string AddressCity { get; set; }
+        }
+
+    }
+
+    public class ManualDeepTypeMapper : IObjectToObjectMapper
+    {
+        private Customer _customer;
+        public string Name { get; } = "Manual Deep Types";
+        public void Initialize()
+        {
+            _customer = new Customer()
+            {
+                Address = new Address() { City = "istanbul", Country = "turkey", Id = 1, Street = "istiklal cad." },
+                HomeAddress = new Address() { City = "istanbul", Country = "turkey", Id = 2, Street = "istiklal cad." },
+                Id = 1,
+                Name = "Eduardo Najera",
+                Credit = 234.7m,
+                WorkAddresses = new List<Address>()
+                {
+                    new Address() {City = "istanbul", Country = "turkey", Id = 5, Street = "istiklal cad."},
+                    new Address() {City = "izmir", Country = "turkey", Id = 6, Street = "konak"}
+                },
+                Addresses = new List<Address>()
+                {
+                    new Address() {City = "istanbul", Country = "turkey", Id = 3, Street = "istiklal cad."},
+                    new Address() {City = "izmir", Country = "turkey", Id = 4, Street = "konak"}
+                }.ToArray()
+            };
+        }
+
+        public object Map()
+        {
+            var dto = new CustomerDTO();
+
+            dto.Id = _customer.Id;
+            dto.Name = _customer.Name;
+            dto.AddressCity = _customer.Address.City;
+
+            dto.Address = new Address() { Id = _customer.Address.Id, Street = _customer.Address.Street, Country = _customer.Address.Country, City = _customer.Address.City };
+
+            dto.HomeAddress = new AddressDTO() { Id = _customer.HomeAddress.Id, Country = _customer.HomeAddress.Country, City = _customer.HomeAddress.City };
+
+            dto.Addresses = new AddressDTO[_customer.Addresses.Length];
+            for (int i = 0; i < _customer.Addresses.Length; i++)
+            {
+                dto.Addresses[i] = new AddressDTO() { Id = _customer.Addresses[i].Id, Country = _customer.Addresses[i].Country, City = _customer.Addresses[i].City };
+            }
+
+            dto.WorkAddresses = new List<AddressDTO>();
+            foreach (var workAddress in _customer.WorkAddresses)
+            {
+                dto.WorkAddresses.Add(new AddressDTO() { Id = workAddress.Id, Country = workAddress.Country, City = workAddress.City });
+            }
+
+            return dto;
+        }
+
+        public class Address
+        {
+            public int Id { get; set; }
+            public string Street { get; set; }
+            public string City { get; set; }
+            public string Country { get; set; }
+        }
+
+        public class AddressDTO
+        {
+            public int Id { get; set; }
+            public string City { get; set; }
+            public string Country { get; set; }
+        }
+
+        public class Customer
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public decimal? Credit { get; set; }
+            public Address Address { get; set; }
+            public Address HomeAddress { get; set; }
+            public Address[] Addresses { get; set; }
+            public ICollection<Address> WorkAddresses { get; set; }
+        }
+
+        public class CustomerDTO
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public Address Address { get; set; }
+            public AddressDTO HomeAddress { get; set; }
+            public AddressDTO[] Addresses { get; set; }
+            public List<AddressDTO> WorkAddresses { get; set; }
+            public string AddressCity { get; set; }
+        }
+
+    }
+
+    public class ComplexTypeMapper : IObjectToObjectMapper
+    {
+        private Foo _foo;
+        public string Name { get; } = "Complex Types";
+        private IMapper _mapper;
+
+
+        public void Initialize()
+        {
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Foo, FooDest>();
+                cfg.CreateMap<InnerFoo, InnerFooDest>();
+            });
+            config.AssertConfigurationIsValid();
+            _mapper = config.CreateMapper();
+            _foo = Foo.New();
+        }
+
+        public object Map()
+        {
+            var dest = _mapper.Map<Foo, FooDest>(_foo);
+            return dest;
+        }
+    }
+
+    public class Foo
+    {
+        public static Foo New() => new Foo
+        {
+            Name = "foo",
+            Int32 = 12,
+            Int64 = 123123,
+            NullInt = 16,
+            DateTime = DateTime.Now,
+            Doublen = 2312112,
+            Foo1 = new InnerFoo { Name = "foo one" },
+            Foos = new List<InnerFoo>
+                {
+                    new InnerFoo {Name = "j1", Int64 = 123, NullInt = 321},
+                    new InnerFoo {Name = "j2", Int32 = 12345, NullInt = 54321},
+                    new InnerFoo {Name = "j3", Int32 = 12345, NullInt = 54321},
+                },
+            FooArr = new[]
+                {
+                    new InnerFoo {Name = "a1"},
+                    new InnerFoo {Name = "a2"},
+                    new InnerFoo {Name = "a3"},
+                },
+            IntArr = new[] { 1, 2, 3, 4, 5 },
+            Ints = new[] { 7, 8, 9 },
+        };
+
+        public string Name { get; set; }
+
+        public int Int32 { get; set; }
+
+        public long Int64 { set; get; }
+
+        public int? NullInt { get; set; }
+
+        public float Floatn { get; set; }
+
+        public double Doublen { get; set; }
+
+        public DateTime DateTime { get; set; }
+
+        public InnerFoo Foo1 { get; set; }
+
+        public List<InnerFoo> Foos { get; set; }
+
+        public InnerFoo[] FooArr { get; set; }
+
+        public int[] IntArr { get; set; }
+
+        public int[] Ints { get; set; }
+    }
+
+    public class InnerFoo
+    {
+        public string Name { get; set; }
+        public int Int32 { get; set; }
+        public long Int64 { set; get; }
+        public int? NullInt { get; set; }
+    }
+
+    public class InnerFooDest
+    {
+        public string Name { get; set; }
+        public int Int32 { get; set; }
+        public long Int64 { set; get; }
+        public int? NullInt { get; set; }
+    }
+
+    public class FooDest
+    {
+        public string Name { get; set; }
+
+        public int Int32 { get; set; }
+
+        public long Int64 { set; get; }
+
+        public int? NullInt { get; set; }
+
+        public float Floatn { get; set; }
+
+        public double Doublen { get; set; }
+
+        public DateTime DateTime { get; set; }
+
+        public InnerFooDest Foo1 { get; set; }
+
+        public List<InnerFooDest> Foos { get; set; }
+
+        public InnerFooDest[] FooArr { get; set; }
+
+        public int[] IntArr { get; set; }
+
+        public int[] Ints { get; set; }
+    }
+
+    public class ManualComplexTypeMapper : IObjectToObjectMapper
+    {
+        private Foo _foo;
+        public string Name { get; } = "Manual Complex Types";
+
+        public void Initialize()
+        {
+            _foo = Foo.New();
+        }
+
+        public object Map()
+        {
+            var dest = new FooDest
+            {
+                Name = _foo.Name,
+                Int32 = _foo.Int32,
+                Int64 = _foo.Int64,
+                NullInt = _foo.NullInt,
+                DateTime = _foo.DateTime,
+                Doublen = _foo.Doublen,
+                Foo1 = new InnerFooDest { Name = _foo.Foo1.Name },
+                Foos = new List<InnerFooDest>(_foo.Foos.Count),
+                FooArr = new InnerFooDest[_foo.Foos.Count],
+                IntArr = new int[_foo.IntArr.Length],
+                Ints = _foo.Ints.ToArray(),
+            };
+            foreach(var foo in _foo.Foos)
+            {
+                dest.Foos.Add(new InnerFooDest { Name = foo.Name, Int64 = foo.Int64, NullInt = foo.NullInt });
+            }
+            ;
+            for(int index = 0; index < _foo.Foos.Count; index++)
+            {
+                var foo = _foo.Foos[index];
+                dest.FooArr[index] = new InnerFooDest { Name = foo.Name, Int64 = foo.Int64, NullInt = foo.NullInt };
+            }
+            Array.Copy(_foo.IntArr, dest.IntArr, _foo.IntArr.Length);
+            return dest;
+        }
+    }
+
 
     public class CtorMapper : IObjectToObjectMapper
     {
         private Model11 _model;
-        private IMapper _mapper;
 
         public string Name => "CtorMapper";
+
+        private IMapper _mapper;
 
         public void Initialize()
         {
             var config = new MapperConfiguration(cfg => cfg.CreateMap<Model11, Dto11>());
+            config.AssertConfigurationIsValid();
             _mapper = config.CreateMapper();
             _model = new Model11 { Value = 5 };
         }
@@ -68,6 +407,7 @@ namespace Benchmark.Flattening
                 cfg.CreateMap<ModelObject, ModelDto>();
             });
             config.AssertConfigurationIsValid();
+            _mapper = config.CreateMapper();
             _source = new ModelObject
             {
                 BaseDate = new DateTime(2007, 4, 5),
@@ -88,7 +428,6 @@ namespace Benchmark.Flattening
                     ProperName = "Some other name"
                 },
             };
-            _mapper = config.CreateMapper();
         }
 
         public object Map()
@@ -140,150 +479,6 @@ namespace Benchmark.Flattening
                 SubSubSubIAmACoolProperty = _source.Sub.SubSub.IAmACoolProperty,
                 SubWithExtraNameProperName = _source.SubWithExtraName.ProperName
             };
-        }
-    }
-
-    public class EquilvalentManualMapper : IObjectToObjectMapper
-    {
-        private object _source;
-        private PropertyMap _propertyMap = null;
-        private ResolutionContext _context;
-
-        public string Name
-        {
-            get { return "Manual"; }
-        }
-
-        public void Initialize()
-        {
-            _source = new ModelObject
-            {
-                BaseDate = new DateTime(2007, 4, 5),
-                Sub = new ModelSubObject
-                {
-                    ProperName = "Some name",
-                    SubSub = new ModelSubSubObject
-                    {
-                        IAmACoolProperty = "Cool daddy-o"
-                    }
-                },
-                Sub2 = new ModelSubObject
-                {
-                    ProperName = "Sub 2 name"
-                },
-                SubWithExtraName = new ModelSubObject
-                {
-                    ProperName = "Some other name"
-                },
-            };
-            _context = new ResolutionContext(_source, null, new TypePair(typeof(ModelObject), typeof(ModelDto)), null, new Mapper(new MapperConfiguration(_ => { })));
-        }
-
-        public object Map()
-        {
-            if (_source == null)
-            {
-                return null;
-            }
-            else
-            {
-                ModelDto mapObj;
-                ModelObject mapFrom;
-                mapFrom = (ModelObject)_source;
-                mapObj = _context.DestinationValue != null ? (ModelDto)_context.DestinationValue : new ModelDto();
-
-                BeforeMap(mapObj);
-
-                try
-                {
-                    mapObj.BaseDate = mapFrom == null ? default(DateTime) : mapFrom.BaseDate;
-                }
-                catch (AutoMapperMappingException e)
-                {
-                    e.PropertyMap = _propertyMap;
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    throw new AutoMapperMappingException(_context, e, _propertyMap);
-                }
-
-                try
-                {
-                    mapObj.Sub2ProperName = mapFrom == null ? default(string) : mapFrom.Sub2 == null ? default(string) : mapFrom.Sub2.ProperName;
-                }
-                catch (AutoMapperMappingException e)
-                {
-                    e.PropertyMap = _propertyMap;
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    throw new AutoMapperMappingException(_context, e, _propertyMap);
-                }
-
-                try
-                {
-                    mapObj.SubProperName = mapFrom == null ? default(string) : mapFrom.Sub == null ? default(string) : mapFrom.Sub.ProperName;
-                }
-                catch (AutoMapperMappingException e)
-                {
-                    e.PropertyMap = _propertyMap;
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    throw new AutoMapperMappingException(_context, e, _propertyMap);
-                }
-
-                try
-                {
-                    mapObj.SubSubSubIAmACoolProperty = mapFrom == null ? default(string)
-                        : mapFrom.Sub == null ? default(string)
-                        : mapFrom.Sub.SubSub == null ? default(string)
-                        : mapFrom.Sub.SubSub.IAmACoolProperty;
-                }
-                catch (AutoMapperMappingException e)
-                {
-                    e.PropertyMap = _propertyMap;
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    throw new AutoMapperMappingException(_context, e, _propertyMap);
-                }
-
-                try
-                {
-                    mapObj.SubWithExtraNameProperName = mapFrom == null ? default(string)
-                        : mapFrom.SubWithExtraName == null ? default(string)
-                        : mapFrom.SubWithExtraName.ProperName;
-                }
-                catch (AutoMapperMappingException e)
-                {
-                    e.PropertyMap = _propertyMap;
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    throw new AutoMapperMappingException(_context, e, _propertyMap);
-                }
-
-                AfterMap(mapObj);
-
-                return mapObj;
-            }
-
-
-        }
-
-        public void BeforeMap(object obj)
-        {
-
-        }
-        public void AfterMap(object obj)
-        {
-
         }
     }
 

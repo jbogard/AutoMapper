@@ -1,26 +1,25 @@
-Framework '4.5.1x86'
-
 properties {
 	$base_dir = resolve-path .
 	$build_dir = "$base_dir\build"
 	$source_dir = "$base_dir\src"
 	$result_dir = "$build_dir\results"
 	$global:config = "debug"
+	$tag = $(git tag -l --points-at HEAD)
+	$revision = @{ $true = "{0:00000}" -f [convert]::ToInt32("0" + $env:APPVEYOR_BUILD_NUMBER, 10); $false = "local" }[$env:APPVEYOR_BUILD_NUMBER -ne $NULL];
+	$suffix = @{ $true = ""; $false = "ci-$revision"}[$tag -ne $NULL -and $revision -ne "local"]
+	$commitHash = $(git rev-parse --short HEAD)
+	$buildSuffix = @{ $true = "$($suffix)-$($commitHash)"; $false = "$($branch)-$($commitHash)" }[$suffix -ne ""]
+    $versionSuffix = @{ $true = "--version-suffix=$($suffix)"; $false = ""}[$suffix -ne ""]
 }
 
 
 task default -depends local
-task local -depends init, compile, test
-task ci -depends clean, release, local, benchmark
+task local -depends compile, test
+task ci -depends clean, release, local, pack, benchmark
 
 task clean {
 	rd "$source_dir\artifacts" -recurse -force  -ErrorAction SilentlyContinue | out-null
 	rd "$base_dir\build" -recurse -force  -ErrorAction SilentlyContinue | out-null
-}
-
-task init {
-	# Make sure per-user dotnet is installed
-	Install-Dotnet
 }
 
 task release {
@@ -28,67 +27,38 @@ task release {
 }
 
 task compile -depends clean {
-	$version = if ($env:APPVEYOR_BUILD_NUMBER -ne $NULL) { $env:APPVEYOR_BUILD_NUMBER } else { '0' }
-	$version = "{0:D5}" -f [convert]::ToInt32($version, 10)
+	echo "build: Tag is $tag"
+	echo "build: Package version suffix is $suffix"
+	echo "build: Build version suffix is $buildSuffix" 
 	
-    exec { & $source_dir\.nuget\Nuget.exe restore $source_dir\AutoMapper.sln }
+	exec { dotnet --version }
+	exec { dotnet --info }
 
-    exec { msbuild /t:Clean /t:Build /p:Configuration=$config /v:q /p:NoWarn=1591 /nologo $source_dir\AutoMapper.sln }
+    exec { dotnet build -c $config --version-suffix=$buildSuffix }
+}
 
-	exec { dotnet pack $source_dir\AutoMapper -c $config --version-suffix $version}
+task pack -depends compile {
+	exec { dotnet pack $source_dir\AutoMapper\AutoMapper.csproj -c $config --no-build $versionSuffix }
 }
 
 task benchmark {
-    exec { & $source_dir\Benchmark\bin\$config\Benchmark.exe }
+    exec { & $source_dir\Benchmark\bin\$config\net461\Benchmark.exe }
 }
 
 task test {
-    $testRunners = @(gci $source_dir\packages -rec -filter Fixie.Console.exe)
+    Push-Location -Path $source_dir\UnitTests
 
-    if ($testRunners.Length -ne 1)
-    {
-        throw "Expected to find 1 Fixie.Console.exe, but found $($testRunners.Length)."
+    try {
+        exec { & dotnet test -c $config --no-build --no-restore }
+    } finally {
+        Pop-Location
     }
 
-    $testRunner = $testRunners[0].FullName
+    Push-Location -Path $source_dir\IntegrationTests
 
-    exec { & $testRunner $source_dir/UnitTests/bin/$config/AutoMapper.UnitTests.Net4.dll }
-    exec { & $testRunner $source_dir/UnitTests.Portable/bin/$config/AutoMapper.UnitTests.Portable.dll }
-    exec { & $testRunner $source_dir/IntegrationTests.Net4/bin/$config/AutoMapper.IntegrationTests.Net4.dll }
-}
-
-function Install-Dotnet
-{
-    $dotnetcli = where-is('dotnet')
-	
-    if($dotnetcli -eq $null)
-    {
-		$dotnetPath = "$pwd\.dotnet"
-		$dotnetCliVersion = if ($env:DOTNET_CLI_VERSION -eq $null) { 'Latest' } else { $env:DOTNET_CLI_VERSION }
-		$dotnetInstallScriptUrl = 'https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/install.ps1'
-		$dotnetInstallScriptPath = '.\scripts\obtain\install.ps1'
-
-		md -Force ".\scripts\obtain\" | Out-Null
-		curl $dotnetInstallScriptUrl -OutFile $dotnetInstallScriptPath
-		& .\scripts\obtain\install.ps1 -Channel "preview" -version $dotnetCliVersion -InstallDir $dotnetPath -NoPath
-		$env:Path = "$dotnetPath;$env:Path"
-	}
-}
-
-function where-is($command) {
-    (ls env:\path).Value.split(';') | `
-        where { $_ } | `
-        %{ [System.Environment]::ExpandEnvironmentVariables($_) } | `
-        where { test-path $_ } |`
-        %{ ls "$_\*" -include *.bat,*.exe,*cmd } | `
-        %{  $file = $_.Name; `
-            if($file -and ($file -eq $command -or `
-			   $file -eq ($command + '.exe') -or  `
-			   $file -eq ($command + '.bat') -or  `
-			   $file -eq ($command + '.cmd'))) `
-            { `
-                $_.FullName `
-            } `
-        } | `
-        select -unique
+    try {
+        exec { & dotnet test -c $config --no-build --no-restore }
+    } finally {
+        Pop-Location
+    }
 }

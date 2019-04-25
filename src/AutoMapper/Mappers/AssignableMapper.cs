@@ -2,26 +2,12 @@ using System.Linq.Expressions;
 
 namespace AutoMapper.Mappers
 {
-    public class AssignableMapper : IObjectMapExpression
+    public class AssignableMapper : IObjectMapper
     {
-        public object Map(ResolutionContext context)
-        {
-            if (context.SourceValue == null && !context.Mapper.ShouldMapSourceValueAsNull(context))
-            {
-                return context.Mapper.CreateObject(context);
-            }
+        public bool IsMatch(TypePair context) => context.DestinationType.IsAssignableFrom(context.SourceType);
 
-            return context.SourceValue;
-        }
-
-        public bool IsMatch(TypePair context)
-        {
-            return context.DestinationType.IsAssignableFrom(context.SourceType);
-        }
-
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
-        {
-            return sourceExpression;
-        }
+        public Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression, Expression contextExpression) 
+            => sourceExpression;
     }
 }

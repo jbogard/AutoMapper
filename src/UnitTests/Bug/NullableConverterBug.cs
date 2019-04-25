@@ -1,5 +1,5 @@
 ﻿using Xunit;
-using Should;
+using Shouldly;
 
 namespace AutoMapper.UnitTests.Bug
 {
@@ -39,7 +39,7 @@ namespace AutoMapper.UnitTests.Bug
 
             public class IntToEntityConverter : ITypeConverter<int, Entity>
             {
-                public Entity Convert(int source, ResolutionContext context)
+                public Entity Convert(int source, Entity destination, ResolutionContext context)
                 {
                     return new Entity() { Id = source };
                 }
@@ -47,7 +47,7 @@ namespace AutoMapper.UnitTests.Bug
 
             public class NullableIntToEntityConverter : ITypeConverter<int?, Entity>
             {
-                public Entity Convert(int? source, ResolutionContext context)
+                public Entity Convert(int? source, Entity destination, ResolutionContext context)
                 {
                     if (source.HasValue)
                     {

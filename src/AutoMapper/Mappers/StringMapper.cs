@@ -2,23 +2,16 @@
 
 namespace AutoMapper.Mappers
 {
-    public class StringMapper : IObjectMapExpression
+    using static Expression;
+
+    public class StringMapper : IObjectMapper
     {
-        public object Map(ResolutionContext context)
-        {
-            return context.SourceValue?.ToString();
-        }
+        public bool IsMatch(TypePair context) => context.DestinationType == typeof(string) && context.SourceType != typeof(string);
 
-        public bool IsMatch(TypePair context)
+        public Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression, Expression contextExpression)
         {
-            return context.DestinationType == typeof(string) && context.SourceType != typeof(string);
-        }
-
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
-        {
-            return Expression.Condition(Expression.Equal(sourceExpression, Expression.Default(sourceExpression.Type)),
-                Expression.Constant(null, typeof (string)),
-                Expression.Call(sourceExpression, typeof (object).GetMethod("ToString")));
+            return Call(sourceExpression, typeof(object).GetDeclaredMethod("ToString"));
         }
     }
 }

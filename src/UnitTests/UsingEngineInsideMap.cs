@@ -1,6 +1,6 @@
 ﻿namespace AutoMapper.UnitTests
 {
-    using Should;
+    using Shouldly;
     using Xunit;
 
     public class UsingEngineInsideMap : AutoMapperSpecBase
@@ -28,9 +28,9 @@
             cfg.CreateMap<Source, Dest>()
                 .ForMember(dest => dest.Child,
                     opt =>
-                        opt.ResolveUsing(
-                            (src, context) =>
-                                context.Mapper.Map(src, context.DestinationValue, typeof (Source), typeof (ChildDest), context)));
+                        opt.MapFrom(
+                            (src, dest, destMember, context) =>
+                                context.Mapper.Map(src, destMember, typeof (Source), typeof (ChildDest), context)));
             cfg.CreateMap<Source, ChildDest>();
         });
 
@@ -43,7 +43,7 @@
         public void Should_map_child_property()
         {
             _dest.Child.ShouldNotBeNull();
-            _dest.Child.Foo.ShouldEqual(5);
+            _dest.Child.Foo.ShouldBe(5);
         }
     }
 }

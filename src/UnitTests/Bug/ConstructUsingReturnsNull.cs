@@ -1,5 +1,5 @@
 ﻿using Xunit;
-using Should;
+using Shouldly;
 using System;
 
 namespace AutoMapper.UnitTests.Bug
@@ -20,11 +20,11 @@ namespace AutoMapper.UnitTests.Bug
             cfg.CreateMap<Source, Destination>().ConstructUsing((Source source) => null);
         });
 
-        [Fact(Skip = "It throws a NRE. Invalid Operation is annoying.")]
+        [Fact]
         public void Should_throw_when_construct_using_returns_null()
         {
             new Action(() => Mapper.Map<Source, Destination>(new Source()))
-                .ShouldThrow<AutoMapperMappingException>(ex=>ex.InnerException.ShouldBeType<InvalidOperationException>());
+                .ShouldThrowException<AutoMapperMappingException>(ex=>ex.InnerException.ShouldBeOfType<NullReferenceException>());
         }
     }
 }

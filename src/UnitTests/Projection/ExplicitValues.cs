@@ -3,7 +3,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using QueryableExtensions;
-    using Should;
+    using Shouldly;
     using Xunit;
 
     public class ExplicitValues : AutoMapperSpecBase
@@ -23,7 +23,7 @@
         protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
         {
             cfg.CreateMap<Source, Dest>()
-                .ForMember(dest => dest.Value, opt => opt.UseValue(5));
+                .ForMember(dest => dest.Value, opt => opt.MapFrom(src => 5));
         });
 
         protected override void Because_of()
@@ -36,7 +36,7 @@
         [Fact]
         public void Should_substitute_value()
         {
-            _dests[0].Value.ShouldEqual(5);
+            _dests[0].Value.ShouldBe(5);
         }
     }
 }

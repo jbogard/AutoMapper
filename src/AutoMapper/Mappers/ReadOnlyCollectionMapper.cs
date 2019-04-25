@@ -1,42 +1,17 @@
-using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
+using AutoMapper.Configuration;
+using AutoMapper.Mappers.Internal;
 
 namespace AutoMapper.Mappers
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using Configuration;
+    using static Expression;
+    using static CollectionMapperExpressionFactory;
 
-    public class ReadOnlyCollectionMapper : IObjectMapExpression
+    public class ReadOnlyCollectionMapper : IObjectMapper
     {
-        public static ReadOnlyCollection<TDestinationItem> Map<TSource, TSourceItem, TDestinationItem>(TSource source, ResolutionContext context)
-            where TSource : IEnumerable
-        {
-            if (source == null && context.Mapper.ShouldMapSourceCollectionAsNull(context))
-                return null;
-
-            IList<TDestinationItem> list = new List<TDestinationItem>();
-
-            var itemContext = new ResolutionContext(context);
-            foreach(var item in (IEnumerable)source ?? Enumerable.Empty<object>())
-            {
-                list.Add((TDestinationItem)itemContext.Map(item, default(TDestinationItem), typeof(TSourceItem), typeof(TDestinationItem)));
-            }
-            return new ReadOnlyCollection<TDestinationItem>(list);
-        }
-
-        private static readonly MethodInfo MapMethodInfo = typeof(ReadOnlyCollectionMapper).GetAllMethods().First(_ => _.IsStatic);
-
-        public object Map(ResolutionContext context)
-        {
-            return
-                MapMethodInfo.MakeGenericMethod(context.SourceType, TypeHelper.GetElementType(context.SourceType), TypeHelper.GetElementType(context.DestinationType))
-                    .Invoke(null, new[] { context.SourceValue, context });
-        }
-
         public bool IsMatch(TypePair context)
         {
             if (!(context.SourceType.IsEnumerableType() && context.DestinationType.IsGenericType()))
@@ -47,9 +22,21 @@ namespace AutoMapper.Mappers
             return genericType == typeof (ReadOnlyCollection<>);
         }
 
-        public Expression MapExpression(Expression sourceExpression, Expression destExpression, Expression contextExpression)
+        public Expression MapExpression(IConfigurationProvider configurationProvider, ProfileMap profileMap,
+            IMemberMap memberMap, Expression sourceExpression, Expression destExpression, Expression contextExpression)
         {
-            return Expression.Call(null, MapMethodInfo.MakeGenericMethod(sourceExpression.Type, TypeHelper.GetElementType(sourceExpression.Type), TypeHelper.GetElementType(destExpression.Type)), sourceExpression, contextExpression);
+            var listType = typeof(List<>).MakeGenericType(ElementTypeHelper.GetElementType(destExpression.Type));
+            var list = MapCollectionExpression(configurationProvider, profileMap, memberMap, sourceExpression, Default(listType), contextExpression, typeof(List<>), MapItemExpr);
+            var dest = Variable(listType, "dest");
+
+            var ctor = destExpression.Type.GetDeclaredConstructors()
+                .First(ci => ci.GetParameters().Length == 1 && ci.GetParameters()[0].ParameterType.IsAssignableFrom(dest.Type));
+
+            return Block(new[] { dest }, 
+                Assign(dest, list), 
+                Condition(NotEqual(dest, Default(listType)), 
+                    New(ctor, dest), 
+                    Default(destExpression.Type)));
         }
     }
 }

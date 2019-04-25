@@ -1,12 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using AutoMapper.QueryableExtensions.Impl;
+
 namespace AutoMapper.QueryableExtensions
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Reflection;
-    using Impl;
-
     /// <summary>
     /// Queryable extensions for AutoMapper
     /// </summary>
@@ -32,18 +31,8 @@ namespace AutoMapper.QueryableExtensions
         /// <param name="destQuery">Destination queryable</param>
         /// <param name="config"></param>
         /// <returns>Mapped destination queryable</returns>
-        public static IQueryable<TDestination> Map<TSource, TDestination>(this IQueryable<TSource> sourceQuery, IQueryable<TDestination> destQuery, IConfigurationProvider config)
-        {
-            return QueryMapperVisitor.Map(sourceQuery, destQuery, config);
-        }
-
-        public static IQueryDataSourceInjection<TSource> UseAsDataSource<TSource>(this IQueryable<TSource> dataSource)
-            => dataSource.UseAsDataSource(Mapper.Instance);
-
-        public static IQueryDataSourceInjection<TSource> UseAsDataSource<TSource>(this IQueryable<TSource> dataSource, IMapper mapper)
-        {
-            return new QueryDataSourceInjection<TSource>(dataSource, mapper);
-        }
+        public static IQueryable<TDestination> Map<TSource, TDestination>(this IQueryable<TSource> sourceQuery, IQueryable<TDestination> destQuery, IConfigurationProvider config) 
+            => QueryMapperVisitor.Map(sourceQuery, destQuery, config);
 
         /// <summary>
         /// Extension method to project from a queryable using the provided mapping engine
@@ -67,10 +56,8 @@ namespace AutoMapper.QueryableExtensions
         /// <param name="parameters">Optional parameter object for parameterized mapping expressions</param>
         /// <param name="membersToExpand">Explicit members to expand</param>
         /// <returns>Expression to project into</returns>
-        public static IQueryable<TDestination> ProjectTo<TDestination>(this IQueryable source, IConfigurationProvider configuration, object parameters, params Expression<Func<TDestination, object>>[] membersToExpand)
-        {
-            return new ProjectionExpression(source, configuration.ExpressionBuilder).To(parameters, membersToExpand);
-        }
+        public static IQueryable<TDestination> ProjectTo<TDestination>(this IQueryable source, IConfigurationProvider configuration, object parameters, params Expression<Func<TDestination, object>>[] membersToExpand) 
+            => new ProjectionExpression(source, configuration.ExpressionBuilder).To(parameters, membersToExpand);
 
         /// <summary>
         /// Extension method to project from a queryable using the provided mapping engine
@@ -123,9 +110,7 @@ namespace AutoMapper.QueryableExtensions
         /// <param name="parameters">Optional parameter object for parameterized mapping expressions</param>
         /// <param name="membersToExpand">Explicit members to expand</param>
         /// <returns>Queryable result, use queryable extension methods to project and execute result</returns>
-        public static IQueryable<TDestination> ProjectTo<TDestination>(this IQueryable source, IConfigurationProvider configuration, IDictionary<string, object> parameters, params string[] membersToExpand)
-        {
-            return new ProjectionExpression(source, configuration.ExpressionBuilder).To<TDestination>(parameters, membersToExpand);
-        }
+        public static IQueryable<TDestination> ProjectTo<TDestination>(this IQueryable source, IConfigurationProvider configuration, IDictionary<string, object> parameters, params string[] membersToExpand) 
+            => new ProjectionExpression(source, configuration.ExpressionBuilder).To<TDestination>(parameters, membersToExpand);
     }
 }

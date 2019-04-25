@@ -1,6 +1,6 @@
 using System;
 using Xunit;
-using Should;
+using Shouldly;
 
 namespace AutoMapper.UnitTests
 {
@@ -10,7 +10,7 @@ namespace AutoMapper.UnitTests
         {
             private Dest _dest;
 
-            public class FooResolver : IValueResolver<int, int>
+            public class FooResolver : IMemberValueResolver<Source, Dest, int, int>
             {
                 private readonly int _value;
 
@@ -24,15 +24,15 @@ namespace AutoMapper.UnitTests
                     _value = value;
                 }
 
-                public int Resolve(int source, ResolutionContext context)
+                public int Resolve(Source s, Dest d, int source, int dest, ResolutionContext context)
                 {
                     return source + _value;
                 }
             }
 
-            public class BarResolver : IValueResolver<int, int>
+            public class BarResolver : IMemberValueResolver<Source, Dest, int, int>
             {
-                public int Resolve(int source, ResolutionContext context)
+                public int Resolve(Source s, Dest d, int source, int dest, ResolutionContext context)
                 {
                     return source + 1;
                 }
@@ -53,8 +53,8 @@ namespace AutoMapper.UnitTests
             protected override MapperConfiguration Configuration { get; } = new MapperConfiguration(cfg =>
             {
                 cfg.CreateMap<Source, Dest>()
-                    .ForMember(x => x.Value, opt => opt.ResolveUsing<FooResolver, int>(x => x.Value))
-                    .ForMember(x => x.Value2, opt => opt.ResolveUsing<BarResolver, int>(x => x.Value2));
+                    .ForMember(x => x.Value, opt => opt.MapFrom<FooResolver, int>(x => x.Value))
+                    .ForMember(x => x.Value2, opt => opt.MapFrom<BarResolver, int>(x => x.Value2));
             });
 
             protected override void Because_of()
@@ -66,13 +66,13 @@ namespace AutoMapper.UnitTests
             [Fact]
             public void Should_use_the_new_ctor()
             {
-                _dest.Value.ShouldEqual(7);
+                _dest.Value.ShouldBe(7);
             }
 
             [Fact]
             public void Should_use_the_existing_ctor_for_non_overridden_ctors()
             {
-                _dest.Value2.ShouldEqual(7);
+                _dest.Value2.ShouldBe(7);
             }
         }
 
@@ -94,7 +94,7 @@ namespace AutoMapper.UnitTests
                     _value = value;
                 }
 
-                public Dest Convert(Source source, ResolutionContext context)
+                public Dest Convert(Source source, Dest destination, ResolutionContext context)
                 {
                     return new Dest
                     {
@@ -131,8 +131,8 @@ namespace AutoMapper.UnitTests
             [Fact]
             public void Should_use_the_new_ctor()
             {
-                _dest.Value.ShouldEqual(7);
-                _dest.Value2.ShouldEqual(8);
+                _dest.Value.ShouldBe(7);
+                _dest.Value2.ShouldBe(8);
             }
 
         }

@@ -1,11 +1,12 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Reflection;
+
 namespace AutoMapper.Configuration.Conventions
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.Linq;
-
     public class MemberConfiguration : IMemberConfiguration
     {
         public IParentSourceToDestinationNameMapper NameMapper { get; set; }
@@ -45,7 +46,7 @@ namespace AutoMapper.Configuration.Conventions
             MemberMappers.Add(new DefaultMember { NameMapper = NameMapper });
         }
 
-        public bool MapDestinationPropertyToSource(IProfileConfiguration options, TypeDetails sourceType, Type destType, Type destMemberType, string nameToSearch, LinkedList<IMemberGetter> resolvers)
+        public bool MapDestinationPropertyToSource(ProfileMap options, TypeDetails sourceType, Type destType, Type destMemberType, string nameToSearch, LinkedList<MemberInfo> resolvers)
         {
             var foundMap = false;
             foreach (var memberMapper in MemberMappers)

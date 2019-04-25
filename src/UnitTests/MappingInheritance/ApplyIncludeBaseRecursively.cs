@@ -1,5 +1,5 @@
 ﻿using System;
-using Should;
+using Shouldly;
 using AutoMapper;
 using Xunit;
 
@@ -28,7 +28,7 @@ namespace AutoMapper.UnitTests.MappingInheritance
         protected override MapperConfiguration Configuration => new MapperConfiguration(cfg =>
         {
             cfg.CreateMap<BaseEntity, ViewModel>()
-                .ForMember(vm => vm.Property2, opt => opt.ResolveUsing(e => e.Property1));
+                .ForMember(vm => vm.Property2, opt => opt.MapFrom(e => e.Property1));
 
             cfg.CreateMap<SubBaseEntity, ViewModel>()
                 .IncludeBase<BaseEntity, ViewModel>();
@@ -46,7 +46,7 @@ namespace AutoMapper.UnitTests.MappingInheritance
         [Fact]
         public void Should_apply_all_included_base_maps()
         {
-            _destination.Property2.ShouldEqual("Test");
+            _destination.Property2.ShouldBe("Test");
         }
     }
 }

@@ -1,12 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+
 namespace AutoMapper.Configuration.Conventions
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Reflection;
-    using System.Text.RegularExpressions;
-    using Execution;
-
     public class NameSplitMember : IChildMemberConfiguration
     {
         public INamingConvention SourceMemberNamingConvention { get; set; }
@@ -18,25 +17,25 @@ namespace AutoMapper.Configuration.Conventions
             DestinationMemberNamingConvention = new PascalCaseNamingConvention();
         }
 
-        public bool MapDestinationPropertyToSource(IProfileConfiguration options, TypeDetails sourceType, Type destType, Type destMemberType, string nameToSearch, LinkedList<IMemberGetter> resolvers, IMemberConfiguration parent )
+        public bool MapDestinationPropertyToSource(ProfileMap options, TypeDetails sourceType, Type destType, Type destMemberType, string nameToSearch, LinkedList<MemberInfo> resolvers, IMemberConfiguration parent )
         {
-            string[] matches = DestinationMemberNamingConvention.SplittingExpression
+            var matches = DestinationMemberNamingConvention.SplittingExpression
                 .Matches(nameToSearch)
                 .Cast<Match>()
                 .Select(m => SourceMemberNamingConvention.ReplaceValue(m))
                 .ToArray();
             MemberInfo matchingMemberInfo = null;
-            for (int i = 1; i <= matches.Length; i++)
+            for (var i = 1; i <= matches.Length; i++)
             {
-                NameSnippet snippet = CreateNameSnippet(matches, i);
+                var snippet = CreateNameSnippet(matches, i);
 
                 matchingMemberInfo = parent.NameMapper.GetMatchingMemberInfo(sourceType, destType, destMemberType, snippet.First);
 
                 if (matchingMemberInfo != null)
                 {
-                    resolvers.AddLast(matchingMemberInfo.ToMemberGetter());
+                    resolvers.AddLast(matchingMemberInfo);
 
-                    var details = new TypeDetails(matchingMemberInfo.GetMemberType(), options);
+                    var details = options.CreateTypeDetails(matchingMemberInfo.GetMemberType());
                     var foundMatch = parent.MapDestinationPropertyToSource(options, details, destType, destMemberType, snippet.Second, resolvers);
 
                     if (!foundMatch)
